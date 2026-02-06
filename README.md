@@ -4,6 +4,7 @@ A censorship resistant way to split payments with friends and strangers!
 
 ## Repo Structure
 
+- [`.plans`](./.plans) Plans created by Claude for executions
 - `app` The Django PWA
 - `contracts` Contracts deployed on EVM networks
 - `indexer` Envio HyperIndex related code
