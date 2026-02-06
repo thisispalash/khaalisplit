@@ -58,11 +58,24 @@ contract khaaliSplitExpenses is Initializable, UUPSUpgradeable, OwnableUpgradeab
         bytes encryptedData
     );
 
+    /**
+     * @notice Emitted when an existing expense is updated by its creator.
+     */
+    event ExpenseUpdated(
+        uint256 indexed groupId,
+        uint256 indexed expenseId,
+        address indexed creator,
+        bytes32 dataHash,
+        bytes encryptedData
+    );
+
     // ──────────────────────────────────────────────
     //  Errors
     // ──────────────────────────────────────────────
 
     error NotGroupMember(uint256 groupId, address user);
+    error NotExpenseCreator(uint256 expenseId, address user);
+    error ExpenseDoesNotExist(uint256 expenseId);
 
     // ──────────────────────────────────────────────
     //  Initializer
@@ -115,6 +128,35 @@ contract khaaliSplitExpenses is Initializable, UUPSUpgradeable, OwnableUpgradeab
         _groupExpenses[groupId].push(expenseId);
 
         emit ExpenseAdded(groupId, expenseId, msg.sender, dataHash, encryptedData);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Update expense
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Updates an existing expense. Only the original creator may update,
+     *         and they must still be a member of the expense's group.
+     * @param expenseId        The expense to update.
+     * @param newDataHash      New keccak256 of the updated expense data.
+     * @param newEncryptedData New AES-encrypted expense blob (emitted in event).
+     */
+    function updateExpense(
+        uint256 expenseId,
+        bytes32 newDataHash,
+        bytes calldata newEncryptedData
+    ) external {
+        Expense storage e = expenses[expenseId];
+        if (e.creator == address(0)) revert ExpenseDoesNotExist(expenseId);
+        if (e.creator != msg.sender) revert NotExpenseCreator(expenseId, msg.sender);
+        if (!groupRegistry.isMember(e.groupId, msg.sender)) {
+            revert NotGroupMember(e.groupId, msg.sender);
+        }
+
+        e.dataHash = newDataHash;
+        e.timestamp = block.timestamp;
+
+        emit ExpenseUpdated(e.groupId, expenseId, msg.sender, newDataHash, newEncryptedData);
     }
 
     // ──────────────────────────────────────────────
