@@ -216,6 +216,81 @@ contract khaaliSplitGroupsTest is Test {
     }
 
     // ──────────────────────────────────────────────
+    //  Leave group
+    // ──────────────────────────────────────────────
+
+    function _addBobToGroup(uint256 groupId) internal {
+        vm.prank(alice);
+        groupsContract.inviteMember(groupId, bob, encryptedKeyBob);
+        vm.prank(bob);
+        groupsContract.acceptGroupInvite(groupId);
+    }
+
+    function test_leaveGroup_success() public {
+        uint256 groupId = _createGroupAsAlice();
+        _addBobToGroup(groupId);
+
+        vm.prank(bob);
+        groupsContract.leaveGroup(groupId);
+
+        assertFalse(groupsContract.isMember(groupId, bob));
+        (, , uint256 memberCount) = groupsContract.groups(groupId);
+        assertEq(memberCount, 1);
+        // Encrypted key should be cleared
+        assertEq(groupsContract.encryptedGroupKey(groupId, bob), "");
+    }
+
+    function test_leaveGroup_emitsEvent() public {
+        uint256 groupId = _createGroupAsAlice();
+        _addBobToGroup(groupId);
+
+        vm.prank(bob);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitGroups.MemberLeft(groupId, bob);
+        groupsContract.leaveGroup(groupId);
+    }
+
+    function test_leaveGroup_creatorCannotLeave() public {
+        uint256 groupId = _createGroupAsAlice();
+
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.CreatorCannotLeave.selector, groupId)
+        );
+        groupsContract.leaveGroup(groupId);
+    }
+
+    function test_leaveGroup_notMember_reverts() public {
+        uint256 groupId = _createGroupAsAlice();
+
+        vm.prank(bob);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.NotGroupMember.selector, groupId, bob)
+        );
+        groupsContract.leaveGroup(groupId);
+    }
+
+    function test_leaveGroup_canBeReinvited() public {
+        uint256 groupId = _createGroupAsAlice();
+        _addBobToGroup(groupId);
+
+        // Bob leaves
+        vm.prank(bob);
+        groupsContract.leaveGroup(groupId);
+        assertFalse(groupsContract.isMember(groupId, bob));
+
+        // Bob can be re-invited and re-accept
+        vm.prank(alice);
+        groupsContract.inviteMember(groupId, bob, encryptedKeyBob);
+        vm.prank(bob);
+        groupsContract.acceptGroupInvite(groupId);
+
+        assertTrue(groupsContract.isMember(groupId, bob));
+        (, , uint256 memberCount) = groupsContract.groups(groupId);
+        assertEq(memberCount, 2);
+    }
+
+    // ──────────────────────────────────────────────
     //  Views
     // ──────────────────────────────────────────────
 

@@ -55,6 +55,7 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
     event GroupCreated(uint256 indexed groupId, address indexed creator, bytes32 nameHash);
     event MemberInvited(uint256 indexed groupId, address indexed inviter, address indexed invitee);
     event MemberAccepted(uint256 indexed groupId, address indexed member);
+    event MemberLeft(uint256 indexed groupId, address indexed member);
 
     // ──────────────────────────────────────────────
     //  Errors
@@ -67,6 +68,7 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
     error AlreadyInvited(uint256 groupId, address user);
     error NotInvited(uint256 groupId, address user);
     error GroupDoesNotExist(uint256 groupId);
+    error CreatorCannotLeave(uint256 groupId);
 
     // ──────────────────────────────────────────────
     //  Initializer
@@ -152,6 +154,27 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
         groups[groupId].memberCount++;
 
         emit MemberAccepted(groupId, msg.sender);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Leave group
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Leaves a group. Soft-delete only — does NOT remove the member from
+     *         `_memberList` (indexer should filter by `isMember`). Clears the
+     *         member's encrypted group key. The group creator cannot leave.
+     * @param groupId The group to leave.
+     */
+    function leaveGroup(uint256 groupId) external {
+        if (!isMember[groupId][msg.sender]) revert NotGroupMember(groupId, msg.sender);
+        if (groups[groupId].creator == msg.sender) revert CreatorCannotLeave(groupId);
+
+        isMember[groupId][msg.sender] = false;
+        groups[groupId].memberCount--;
+        delete encryptedGroupKey[groupId][msg.sender];
+
+        emit MemberLeft(groupId, msg.sender);
     }
 
     // ──────────────────────────────────────────────
