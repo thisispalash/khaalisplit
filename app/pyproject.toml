@@ -21,6 +21,7 @@ dependencies = [
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.15.0"
+django-extensions = "^4.1"
 
 
 [build-system]
