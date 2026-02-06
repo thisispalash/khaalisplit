@@ -32,23 +32,13 @@ forge test --gas-report
 
 ### 1. Environment
 
-Set up your `.env` file:
-
-```bash
-DEPLOYER_PRIVATE_KEY=0x...
-BACKEND_ADDRESS=0x...
-GATEWAY_URL="https://your-gateway.example.com/{sender}/{data}.json"
-GATEWAY_SIGNER=0x...
-OWNER_ADDRESS=0x...
-ETHERSCAN_API_KEY=...
-SEPOLIA_RPC_URL=...
-BASE_RPC_URL=...
-ARBITRUM_RPC_URL=...
-```
+Set up your `.env` file according to [`.env.example`](./.env.example)
 
 ### 2. Token config
 
-Token addresses per chain are in [`script/tokens.json`](script/tokens.json), keyed by chain ID. The settlement deploy script reads this file automatically. Use `address(0)` to skip a token on a given chain.
+Token addresses per chain are in [`script/tokens.json`](script/tokens.json), keyed by chain ID. 
+The settlement deploy script reads this file automatically. Use `address(0)` to skip a token on a 
+given chain.
 
 ### 3. Deploy
 
