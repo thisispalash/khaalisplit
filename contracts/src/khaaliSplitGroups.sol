@@ -160,6 +160,8 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
 
     /**
      * @notice Returns the ordered list of members in a group.
+     * @dev WARNING: Returns the full array with no pagination. Gas cost grows
+     *      linearly with the number of members. Use off-chain indexing for large lists.
      */
     function getMembers(uint256 groupId) external view returns (address[] memory) {
         return _memberList[groupId];

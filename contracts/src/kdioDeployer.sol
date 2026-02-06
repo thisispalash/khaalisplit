@@ -55,6 +55,8 @@ contract kdioDeployer {
             new ERC1967Proxy{salt: salt}(implementation, initData)
         );
 
+        // NOTE: This check is unreachable — Solidity's `new` with CREATE2
+        // reverts on failure rather than returning address(0). Kept for clarity.
         if (proxy == address(0)) revert DeploymentFailed();
 
         emit Deployed(proxy, salt, implementation);

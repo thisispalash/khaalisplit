@@ -109,6 +109,10 @@ contract khaaliSplitFriends is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         if (isFriend[msg.sender][friend]) revert AlreadyFriends();
         if (pendingRequest[msg.sender][friend]) revert AlreadyRequested();
 
+        // TODO: If pendingRequest[friend][msg.sender] is true, auto-accept instead
+        //       of creating a second dangling request. Currently, mutual requests
+        //       leave one pendingRequest uncleaned after acceptFriend().
+
         pendingRequest[msg.sender][friend] = true;
 
         emit FriendRequested(msg.sender, friend);
@@ -148,6 +152,8 @@ contract khaaliSplitFriends is Initializable, UUPSUpgradeable, OwnableUpgradeabl
 
     /**
      * @notice Returns the list of friends for `user`.
+     * @dev WARNING: Returns the full array with no pagination. Gas cost grows
+     *      linearly with the number of friends. Use off-chain indexing for large lists.
      */
     function getFriends(address user) external view returns (address[] memory) {
         return _friendsList[user];

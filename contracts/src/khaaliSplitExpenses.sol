@@ -135,6 +135,8 @@ contract khaaliSplitExpenses is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
     /**
      * @notice Returns the list of expense IDs for a group.
+     * @dev WARNING: Returns the full array with no pagination. Gas cost grows
+     *      linearly with the number of expenses. Use off-chain indexing for large lists.
      */
     function getGroupExpenses(uint256 groupId) external view returns (uint256[] memory) {
         return _groupExpenses[groupId];

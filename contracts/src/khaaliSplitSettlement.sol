@@ -161,7 +161,10 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
         if (recipient == address(0)) revert ZeroAddress();
         if (!allowedTokens[token]) revert TokenNotAllowed(token);
 
-        IERC20Permit(token).permit(sender, address(this), amount, deadline, v, r, s);
+        // Wrap in try/catch to prevent front-running griefing:
+        // If someone front-runs the permit call, the nonce is consumed but
+        // the allowance is still set, so safeTransferFrom succeeds anyway.
+        try IERC20Permit(token).permit(sender, address(this), amount, deadline, v, r, s) {} catch {}
         IERC20(token).safeTransferFrom(sender, address(this), amount);
 
         emit SettlementInitiated(sender, recipient, destChainId, token, amount, note);

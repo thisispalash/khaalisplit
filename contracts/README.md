@@ -54,3 +54,12 @@ forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arc_testne
 forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url base --broadcast
 forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arbitrum --broadcast
 ```
+
+## Known Limitations
+> These are acceptable for the hackathon but should be addressed before production.
+
+- **No remove/leave/delete operations**: Once friends are added, groups joined, or expenses
+  created, they cannot be removed. There is no `removeFriend()`, `leaveGroup()`,
+  `removeMember()`, or `deleteExpense()` function.
+- **Unbounded arrays in views**: `getFriends()`, `getMembers()`, and `getGroupExpenses()`
+  return full arrays with no pagination. Gas costs grow linearly with array size.
