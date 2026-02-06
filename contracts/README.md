@@ -30,6 +30,8 @@ forge test --gas-report
 
 ## Deployment
 
+### 1. Environment
+
 Set up your `.env` file:
 
 ```bash
@@ -38,15 +40,17 @@ BACKEND_ADDRESS=0x...
 GATEWAY_URL="https://your-gateway.example.com/{sender}/{data}.json"
 GATEWAY_SIGNER=0x...
 OWNER_ADDRESS=0x...
-USDC_ADDRESS=0x...
-EURC_ADDRESS=0x...
 ETHERSCAN_API_KEY=...
 SEPOLIA_RPC_URL=...
 BASE_RPC_URL=...
 ARBITRUM_RPC_URL=...
 ```
 
-Then source it and deploy:
+### 2. Token config
+
+Token addresses per chain are in [`script/tokens.json`](script/tokens.json), keyed by chain ID. The settlement deploy script reads this file automatically. Use `address(0)` to skip a token on a given chain.
+
+### 3. Deploy
 
 ```bash
 source .env
@@ -54,16 +58,9 @@ source .env
 # Deploy core contracts to Sepolia
 forge script script/DeployCore.s.sol:DeployCore --rpc-url sepolia --broadcast --verify
 
-# Deploy settlement to each chain (adds USDC + EURC as allowed tokens)
-USDC_ADDRESS=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238 EURC_ADDRESS=0x... \
-  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url sepolia --broadcast
-
-USDC_ADDRESS=0x... EURC_ADDRESS=0x... \
-  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arc_testnet --broadcast
-
-USDC_ADDRESS=0x... EURC_ADDRESS=0x... \
-  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url base --broadcast
-
-USDC_ADDRESS=0x... EURC_ADDRESS=0x... \
-  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arbitrum --broadcast
+# Deploy settlement to each chain (reads token addresses from script/tokens.json)
+forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url sepolia --broadcast
+forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arc_testnet --broadcast
+forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url base --broadcast
+forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arbitrum --broadcast
 ```

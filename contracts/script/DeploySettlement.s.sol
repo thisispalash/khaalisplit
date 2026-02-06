@@ -8,29 +8,44 @@ import {khaaliSplitSettlement} from "../src/khaaliSplitSettlement.sol";
 /**
  * @title DeploySettlement
  * @notice Deploys khaaliSplitSettlement to any chain via kdioDeployer (CREATE2).
- *         Uses empty initData for deterministic proxy address, then initializes
- *         separately and adds allowed tokens (USDC, EURC).
+ *         Reads allowed token addresses from `script/tokens.json` keyed by chain ID.
  *
  * @dev Required environment variables:
  *   - DEPLOYER_PRIVATE_KEY: Private key for the deployer EOA
- *   - USDC_ADDRESS: USDC token address on the target chain
- *   - EURC_ADDRESS: EURC token address on the target chain
  *   - OWNER_ADDRESS: Contract owner (relayer)
  *
+ *   Token config: `script/tokens.json` — keyed by chain ID, e.g.:
+ *   {
+ *     "11155111": { "name": "sepolia", "tokens": { "USDC": "0x...", "EURC": "0x..." } },
+ *     "8453":     { "name": "base",    "tokens": { "USDC": "0x...", "EURC": "0x..." } }
+ *   }
+ *
  * Usage:
- *   USDC_ADDRESS=0x... EURC_ADDRESS=0x... \
- *     forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url sepolia --broadcast
+ *   forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url sepolia --broadcast
+ *   forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url base --broadcast
  */
 contract DeploySettlement is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        address usdcAddress = vm.envAddress("USDC_ADDRESS");
-        address eurcAddress = vm.envAddress("EURC_ADDRESS");
         address ownerAddress = vm.envAddress("OWNER_ADDRESS");
+
+        // ── Read token config for current chain ──
+        string memory json = vm.readFile("script/tokens.json");
+        string memory chainIdStr = vm.toString(block.chainid);
+
+        string memory usdcKey = string.concat(".", chainIdStr, ".tokens.USDC");
+        string memory eurcKey = string.concat(".", chainIdStr, ".tokens.EURC");
+
+        address usdcAddress = vm.parseJsonAddress(json, usdcKey);
+        address eurcAddress = vm.parseJsonAddress(json, eurcKey);
+
+        console.log("Chain ID:", block.chainid);
+        console.log("USDC:    ", usdcAddress);
+        console.log("EURC:    ", eurcAddress);
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // ── 1. Deploy kdioDeployer (or reuse existing) ──
+        // ── 1. Deploy kdioDeployer ──
         kdioDeployer factory = new kdioDeployer();
         console.log("kdioDeployer:", address(factory));
 
@@ -39,8 +54,6 @@ contract DeploySettlement is Script {
         console.log("khaaliSplitSettlement impl:", address(impl));
 
         // ── 3. Deploy proxy via CREATE2 with EMPTY initData ──
-        // This ensures the proxy address is deterministic regardless of
-        // chain-specific token addresses.
         bytes32 salt = keccak256("khaaliSplitSettlement-v1");
         address proxyAddr = factory.deploy(salt, address(impl), "");
         console.log("khaaliSplitSettlement proxy:", proxyAddr);
@@ -49,12 +62,16 @@ contract DeploySettlement is Script {
         khaaliSplitSettlement proxy = khaaliSplitSettlement(proxyAddr);
         proxy.initialize(ownerAddress);
 
-        // ── 5. Add allowed tokens ──
-        proxy.addToken(usdcAddress);
-        console.log("Added USDC:", usdcAddress);
+        // ── 5. Add allowed tokens (skip zero addresses) ──
+        if (usdcAddress != address(0)) {
+            proxy.addToken(usdcAddress);
+            console.log("Added USDC:", usdcAddress);
+        }
 
-        proxy.addToken(eurcAddress);
-        console.log("Added EURC:", eurcAddress);
+        if (eurcAddress != address(0)) {
+            proxy.addToken(eurcAddress);
+            console.log("Added EURC:", eurcAddress);
+        }
 
         vm.stopBroadcast();
 
