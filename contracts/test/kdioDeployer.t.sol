@@ -105,9 +105,13 @@ contract kdioDeployerTest is Test {
 
         // Initialize separately
         khaaliSplitSettlement proxy = khaaliSplitSettlement(proxyAddr);
-        proxy.initialize(address(usdc), owner);
+        proxy.initialize(owner);
 
-        assertEq(address(proxy.usdc()), address(usdc));
+        // Add allowed token
+        vm.prank(owner);
+        proxy.addToken(address(usdc));
+
+        assertTrue(proxy.allowedTokens(address(usdc)));
         assertEq(proxy.owner(), owner);
     }
 

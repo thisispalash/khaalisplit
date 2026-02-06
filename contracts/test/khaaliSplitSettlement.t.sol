@@ -10,6 +10,7 @@ import {MockUSDC} from "./helpers/MockUSDC.sol";
 contract khaaliSplitSettlementTest is Test {
     khaaliSplitSettlement public settlement;
     MockUSDC public usdc;
+    MockUSDC public eurc;
 
     address owner = makeAddr("owner");
     address alice;
@@ -24,19 +25,27 @@ contract khaaliSplitSettlementTest is Test {
         // Create alice with known private key for permit signing
         (alice, aliceKey) = makeAddrAndKey("alice");
 
-        // Deploy MockUSDC
+        // Deploy mock tokens
         usdc = new MockUSDC();
+        eurc = new MockUSDC(); // reuse MockUSDC for EURC (same 6 decimals + permit)
 
         // Deploy settlement proxy
         khaaliSplitSettlement impl = new khaaliSplitSettlement();
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(impl),
-            abi.encodeCall(khaaliSplitSettlement.initialize, (address(usdc), owner))
+            abi.encodeCall(khaaliSplitSettlement.initialize, (owner))
         );
         settlement = khaaliSplitSettlement(address(proxy));
 
-        // Mint USDC to alice
+        // Owner adds allowed tokens
+        vm.startPrank(owner);
+        settlement.addToken(address(usdc));
+        settlement.addToken(address(eurc));
+        vm.stopPrank();
+
+        // Mint tokens to alice
         usdc.mint(alice, 1000e6);
+        eurc.mint(alice, 1000e6);
     }
 
     // ──────────────────────────────────────────────
@@ -44,13 +53,56 @@ contract khaaliSplitSettlementTest is Test {
     // ──────────────────────────────────────────────
 
     function test_initialize_setsState() public view {
-        assertEq(address(settlement.usdc()), address(usdc));
         assertEq(settlement.owner(), owner);
     }
 
     function test_initialize_cannotReinitialize() public {
         vm.expectRevert();
-        settlement.initialize(address(usdc), owner);
+        settlement.initialize(owner);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Token management
+    // ──────────────────────────────────────────────
+
+    function test_addToken_success() public view {
+        assertTrue(settlement.allowedTokens(address(usdc)));
+        assertTrue(settlement.allowedTokens(address(eurc)));
+    }
+
+    function test_addToken_emitsEvent() public {
+        MockUSDC newToken = new MockUSDC();
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, false);
+        emit khaaliSplitSettlement.TokenAdded(address(newToken));
+        settlement.addToken(address(newToken));
+    }
+
+    function test_addToken_zeroAddress_reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(khaaliSplitSettlement.ZeroAddress.selector);
+        settlement.addToken(address(0));
+    }
+
+    function test_addToken_notOwner_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        settlement.addToken(makeAddr("token"));
+    }
+
+    function test_removeToken_success() public {
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, false);
+        emit khaaliSplitSettlement.TokenRemoved(address(eurc));
+        settlement.removeToken(address(eurc));
+
+        assertFalse(settlement.allowedTokens(address(eurc)));
+    }
+
+    function test_removeToken_notOwner_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        settlement.removeToken(address(usdc));
     }
 
     // ──────────────────────────────────────────────
@@ -63,30 +115,59 @@ contract khaaliSplitSettlementTest is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit khaaliSplitSettlement.SettlementInitiated(alice, bob, DEST_CHAIN_ID, AMOUNT, "");
-        settlement.settle(bob, DEST_CHAIN_ID, AMOUNT, "");
+        emit khaaliSplitSettlement.SettlementInitiated(
+            alice, bob, DEST_CHAIN_ID, address(usdc), AMOUNT, ""
+        );
+        settlement.settle(address(usdc), bob, DEST_CHAIN_ID, AMOUNT, "");
 
         assertEq(usdc.balanceOf(address(settlement)), AMOUNT);
         assertEq(usdc.balanceOf(alice), 1000e6 - AMOUNT);
     }
 
+    function test_settle_withEURC() public {
+        vm.prank(alice);
+        eurc.approve(address(settlement), AMOUNT);
+
+        vm.prank(alice);
+        settlement.settle(address(eurc), bob, DEST_CHAIN_ID, AMOUNT, "");
+
+        assertEq(eurc.balanceOf(address(settlement)), AMOUNT);
+    }
+
+    function test_settle_tokenNotAllowed_reverts() public {
+        MockUSDC randomToken = new MockUSDC();
+        randomToken.mint(alice, 1000e6);
+
+        vm.prank(alice);
+        randomToken.approve(address(settlement), AMOUNT);
+
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                khaaliSplitSettlement.TokenNotAllowed.selector,
+                address(randomToken)
+            )
+        );
+        settlement.settle(address(randomToken), bob, DEST_CHAIN_ID, AMOUNT, "");
+    }
+
     function test_settle_zeroAmount_reverts() public {
         vm.prank(alice);
         vm.expectRevert(khaaliSplitSettlement.ZeroAmount.selector);
-        settlement.settle(bob, DEST_CHAIN_ID, 0, "");
+        settlement.settle(address(usdc), bob, DEST_CHAIN_ID, 0, "");
     }
 
     function test_settle_zeroRecipient_reverts() public {
         vm.prank(alice);
         vm.expectRevert(khaaliSplitSettlement.ZeroAddress.selector);
-        settlement.settle(address(0), DEST_CHAIN_ID, AMOUNT, "");
+        settlement.settle(address(usdc), address(0), DEST_CHAIN_ID, AMOUNT, "");
     }
 
     function test_settle_insufficientAllowance_reverts() public {
         vm.prank(alice);
         // No approval
         vm.expectRevert(); // SafeERC20 will revert
-        settlement.settle(bob, DEST_CHAIN_ID, AMOUNT, "");
+        settlement.settle(address(usdc), bob, DEST_CHAIN_ID, AMOUNT, "");
     }
 
     function test_settle_withNote() public {
@@ -97,8 +178,10 @@ contract khaaliSplitSettlementTest is Test {
 
         vm.prank(alice);
         vm.expectEmit(true, true, true, true);
-        emit khaaliSplitSettlement.SettlementInitiated(alice, bob, DEST_CHAIN_ID, AMOUNT, note);
-        settlement.settle(bob, DEST_CHAIN_ID, AMOUNT, note);
+        emit khaaliSplitSettlement.SettlementInitiated(
+            alice, bob, DEST_CHAIN_ID, address(usdc), AMOUNT, note
+        );
+        settlement.settle(address(usdc), bob, DEST_CHAIN_ID, AMOUNT, note);
     }
 
     // ──────────────────────────────────────────────
@@ -110,6 +193,7 @@ contract khaaliSplitSettlementTest is Test {
 
         // Build permit signature
         bytes32 permitHash = _buildPermitDigest(
+            usdc,
             alice,
             address(settlement),
             AMOUNT,
@@ -121,23 +205,45 @@ contract khaaliSplitSettlementTest is Test {
         // Relayer calls settleWithPermit on behalf of alice
         vm.prank(relayer);
         vm.expectEmit(true, true, true, true);
-        emit khaaliSplitSettlement.SettlementInitiated(alice, bob, DEST_CHAIN_ID, AMOUNT, "");
-        settlement.settleWithPermit(alice, bob, DEST_CHAIN_ID, AMOUNT, "", deadline, v, r, s);
+        emit khaaliSplitSettlement.SettlementInitiated(
+            alice, bob, DEST_CHAIN_ID, address(usdc), AMOUNT, ""
+        );
+        settlement.settleWithPermit(
+            address(usdc), alice, bob, DEST_CHAIN_ID, AMOUNT, "", deadline, v, r, s
+        );
 
         assertEq(usdc.balanceOf(address(settlement)), AMOUNT);
         assertEq(usdc.balanceOf(alice), 1000e6 - AMOUNT);
     }
 
+    function test_settleWithPermit_tokenNotAllowed_reverts() public {
+        MockUSDC randomToken = new MockUSDC();
+        vm.prank(relayer);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                khaaliSplitSettlement.TokenNotAllowed.selector,
+                address(randomToken)
+            )
+        );
+        settlement.settleWithPermit(
+            address(randomToken), alice, bob, DEST_CHAIN_ID, AMOUNT, "", 0, 0, bytes32(0), bytes32(0)
+        );
+    }
+
     function test_settleWithPermit_zeroAmount_reverts() public {
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.ZeroAmount.selector);
-        settlement.settleWithPermit(alice, bob, DEST_CHAIN_ID, 0, "", 0, 0, bytes32(0), bytes32(0));
+        settlement.settleWithPermit(
+            address(usdc), alice, bob, DEST_CHAIN_ID, 0, "", 0, 0, bytes32(0), bytes32(0)
+        );
     }
 
     function test_settleWithPermit_zeroRecipient_reverts() public {
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.ZeroAddress.selector);
-        settlement.settleWithPermit(alice, address(0), DEST_CHAIN_ID, AMOUNT, "", 0, 0, bytes32(0), bytes32(0));
+        settlement.settleWithPermit(
+            address(usdc), alice, address(0), DEST_CHAIN_ID, AMOUNT, "", 0, 0, bytes32(0), bytes32(0)
+        );
     }
 
     // ──────────────────────────────────────────────
@@ -149,7 +255,7 @@ contract khaaliSplitSettlementTest is Test {
         vm.prank(alice);
         usdc.approve(address(settlement), AMOUNT);
         vm.prank(alice);
-        settlement.settle(bob, DEST_CHAIN_ID, AMOUNT, "");
+        settlement.settle(address(usdc), bob, DEST_CHAIN_ID, AMOUNT, "");
 
         // Owner withdraws
         vm.prank(owner);
@@ -193,6 +299,7 @@ contract khaaliSplitSettlementTest is Test {
     // ──────────────────────────────────────────────
 
     function _buildPermitDigest(
+        MockUSDC token,
         address permitOwner,
         address spender,
         uint256 value,
@@ -210,7 +317,7 @@ contract khaaliSplitSettlementTest is Test {
         return keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                usdc.DOMAIN_SEPARATOR(),
+                token.DOMAIN_SEPARATOR(),
                 structHash
             )
         );

@@ -10,19 +10,19 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 /**
  * @title khaaliSplitSettlement
- * @notice Settlement contract for khaaliSplit — holds USDC deposits and emits
- *         settlement intents for cross-chain relay. Deployed at a deterministic
- *         CREATE2 address across all chains via kdioDeployer.
+ * @notice Settlement contract for khaaliSplit — accepts allowed stablecoins
+ *         (e.g., USDC, EURC) and emits settlement intents for cross-chain relay.
+ *         Deployed at a deterministic CREATE2 address across all chains via kdioDeployer.
  *
  * @dev UUPS upgradeable. Uses `initialize()` (not constructor args) so the
  *      implementation bytecode is identical across chains, preserving CREATE2
- *      address determinism despite different USDC addresses per chain.
+ *      address determinism.
  *
  *      Flow:
  *        1. User calls `settle()` or relayer calls `settleWithPermit()`.
- *        2. USDC is transferred to this contract.
+ *        2. Allowed token is transferred to this contract.
  *        3. `SettlementInitiated` event is emitted (indexed by Envio/HyperIndex).
- *        4. Owner (relayer) withdraws USDC to bridge via CCTP.
+ *        4. Owner (relayer) withdraws tokens to bridge via CCTP.
  */
 contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using SafeERC20 for IERC20;
@@ -31,8 +31,8 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     //  Storage
     // ──────────────────────────────────────────────
 
-    /// @notice The USDC token address on this chain (set via initialize).
-    IERC20 public usdc;
+    /// @notice Allowed settlement tokens (e.g., USDC, EURC).
+    mapping(address => bool) public allowedTokens;
 
     // ──────────────────────────────────────────────
     //  Events
@@ -42,9 +42,13 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
         address indexed sender,
         address indexed recipient,
         uint256 indexed destChainId,
+        address token,
         uint256 amount,
         bytes note
     );
+
+    event TokenAdded(address indexed token);
+    event TokenRemoved(address indexed token);
 
     // ──────────────────────────────────────────────
     //  Errors
@@ -52,6 +56,7 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
 
     error ZeroAmount();
     error ZeroAddress();
+    error TokenNotAllowed(address token);
 
     // ──────────────────────────────────────────────
     //  Initializer
@@ -64,12 +69,33 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
 
     /**
      * @notice Initializes the settlement contract.
-     * @param _usdc  USDC token address on this chain.
      * @param _owner Owner / relayer address.
      */
-    function initialize(address _usdc, address _owner) external initializer {
+    function initialize(address _owner) external initializer {
         __Ownable_init(_owner);
-        usdc = IERC20(_usdc);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Token management (owner only)
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Adds a token to the allowed list.
+     * @param token The ERC20 token address to allow.
+     */
+    function addToken(address token) external onlyOwner {
+        if (token == address(0)) revert ZeroAddress();
+        allowedTokens[token] = true;
+        emit TokenAdded(token);
+    }
+
+    /**
+     * @notice Removes a token from the allowed list.
+     * @param token The ERC20 token address to disallow.
+     */
+    function removeToken(address token) external onlyOwner {
+        allowedTokens[token] = false;
+        emit TokenRemoved(token);
     }
 
     // ──────────────────────────────────────────────
@@ -78,13 +104,15 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
 
     /**
      * @notice Initiates a settlement. The caller must have approved this contract
-     *         to spend `amount` USDC beforehand.
+     *         to spend `amount` of `token` beforehand.
+     * @param token       The ERC20 token to settle with (must be allowed).
      * @param recipient   Destination address on the target chain.
      * @param destChainId The chain ID where the recipient should receive funds.
-     * @param amount      USDC amount (6 decimals).
+     * @param amount      Token amount (in token decimals, e.g., 6 for USDC).
      * @param note        Arbitrary data (e.g., encrypted memo).
      */
     function settle(
+        address token,
         address recipient,
         uint256 destChainId,
         uint256 amount,
@@ -92,10 +120,11 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     ) external {
         if (amount == 0) revert ZeroAmount();
         if (recipient == address(0)) revert ZeroAddress();
+        if (!allowedTokens[token]) revert TokenNotAllowed(token);
 
-        usdc.safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
 
-        emit SettlementInitiated(msg.sender, recipient, destChainId, amount, note);
+        emit SettlementInitiated(msg.sender, recipient, destChainId, token, amount, note);
     }
 
     // ──────────────────────────────────────────────
@@ -105,10 +134,11 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     /**
      * @notice Settles using an EIP-2612 permit — a relayer can call this on
      *         behalf of the user without the user needing to send an approve tx.
-     * @param sender      The address whose USDC is being settled.
+     * @param token       The ERC20 token to settle with (must be allowed + support EIP-2612).
+     * @param sender      The address whose tokens are being settled.
      * @param recipient   Destination address on the target chain.
      * @param destChainId The chain ID where the recipient should receive funds.
-     * @param amount      USDC amount (6 decimals).
+     * @param amount      Token amount (in token decimals).
      * @param note        Arbitrary data (e.g., encrypted memo).
      * @param deadline    EIP-2612 permit deadline.
      * @param v           Signature v.
@@ -116,6 +146,7 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
      * @param s           Signature s.
      */
     function settleWithPermit(
+        address token,
         address sender,
         address recipient,
         uint256 destChainId,
@@ -128,11 +159,12 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     ) external {
         if (amount == 0) revert ZeroAmount();
         if (recipient == address(0)) revert ZeroAddress();
+        if (!allowedTokens[token]) revert TokenNotAllowed(token);
 
-        IERC20Permit(address(usdc)).permit(sender, address(this), amount, deadline, v, r, s);
-        usdc.safeTransferFrom(sender, address(this), amount);
+        IERC20Permit(token).permit(sender, address(this), amount, deadline, v, r, s);
+        IERC20(token).safeTransferFrom(sender, address(this), amount);
 
-        emit SettlementInitiated(sender, recipient, destChainId, amount, note);
+        emit SettlementInitiated(sender, recipient, destChainId, token, amount, note);
     }
 
     // ──────────────────────────────────────────────
@@ -141,7 +173,7 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
 
     /**
      * @notice Withdraws tokens from the contract. Used by the relayer to move
-     *         USDC to a bridge (e.g., CCTP).
+     *         tokens to a bridge (e.g., CCTP).
      * @param token  The ERC20 token to withdraw.
      * @param to     The recipient address.
      * @param amount The amount to withdraw.
