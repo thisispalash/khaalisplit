@@ -1,66 +1,68 @@
-## Foundry
+# khaaliSplit Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Smart contracts for khaaliSplit, built with [Foundry](https://getfoundry.sh/).
 
-Foundry consists of:
+## Architecture
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+| Contract | Chain | Description |
+|----------|-------|-------------|
+| `khaaliSplitFriends` | Sepolia | Social graph — ECDH pubkey registry + friend requests |
+| `khaaliSplitGroups` | Sepolia | Group registry with encrypted group keys |
+| `khaaliSplitExpenses` | Sepolia | Expense registry (hashes on-chain, encrypted data in events) |
+| `khaaliSplitResolver` | Sepolia | CCIP-Read (EIP-3668) ENS resolver for `*.khaalisplit.eth` |
+| `khaaliSplitSettlement` | All chains | USDC settlement with EIP-2612 permit support |
+| `kdioDeployer` | All chains | CREATE2 factory for deterministic proxy addresses |
 
-## Documentation
+All contracts (except `kdioDeployer`) use the **UUPS upgradeable proxy pattern**.
 
-https://book.getfoundry.sh/
+## Build & Test
 
-## Usage
+```bash
+# Build
+forge build
 
-### Build
+# Run all tests
+forge test -vvv
 
-```shell
-$ forge build
+# Gas report
+forge test --gas-report
 ```
 
-### Test
+## Deployment
 
-```shell
-$ forge test
+Set up your `.env` file:
+
+```bash
+DEPLOYER_PRIVATE_KEY=0x...
+BACKEND_ADDRESS=0x...
+GATEWAY_URL="https://your-gateway.example.com/{sender}/{data}.json"
+GATEWAY_SIGNER=0x...
+OWNER_ADDRESS=0x...
+USDC_ADDRESS=0x...
+ETHERSCAN_API_KEY=...
+SEPOLIA_RPC_URL=...
+BASE_RPC_URL=...
+ARBITRUM_RPC_URL=...
 ```
 
-### Format
+Then source it and deploy:
 
-```shell
-$ forge fmt
-```
+```bash
+source .env
 
-### Gas Snapshots
+# Deploy core contracts to Sepolia
+forge script script/DeployCore.s.sol:DeployCore --rpc-url sepolia --broadcast --verify
 
-```shell
-$ forge snapshot
-```
+# Deploy settlement to each chain
+USDC_ADDRESS=0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238 \
+  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url sepolia --broadcast
 
-### Anvil
+USDC_ADDRESS=0x... \
+  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arc_testnet --broadcast
 
-```shell
-$ anvil
-```
+USDC_ADDRESS=0x... \
+  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url base --broadcast
 
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+USDC_ADDRESS=0x... \
+  forge script script/DeploySettlement.s.sol:DeploySettlement --rpc-url arbitrum --broadcast
 ```
