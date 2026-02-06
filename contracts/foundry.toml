@@ -1,0 +1,36 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+test = "test"
+script = "script"
+
+# Solidity compiler
+solc = "0.8.20"
+evm_version = "paris"
+
+# Optimizer
+optimizer = true
+optimizer_runs = 200
+
+# CREATE2 determinism — critical for kdioDeployer
+bytecode_hash = "none"
+cbor_metadata = false
+
+# Remappings
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+  "@ensdomains/ens-contracts/=lib/ens-contracts/contracts/",
+]
+
+# RPC endpoints
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+arc_testnet = "https://rpc.testnet.arc.network"
+base = "${BASE_RPC_URL}"
+arbitrum = "${ARBITRUM_RPC_URL}"
+
+# Block explorer verification
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}", chain = "sepolia" }
