@@ -1,0 +1,256 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {khaaliSplitFriends} from "../src/khaaliSplitFriends.sol";
+
+contract khaaliSplitFriendsTest is Test {
+    khaaliSplitFriends public friends;
+
+    address owner = makeAddr("owner");
+    address backend = makeAddr("backend");
+    address alice = makeAddr("alice");
+    address bob = makeAddr("bob");
+    address charlie = makeAddr("charlie");
+
+    bytes alicePubKey = hex"04aabbccdd";
+    bytes bobPubKey = hex"04eeff0011";
+    bytes charliePubKey = hex"04deadbeef";
+
+    function setUp() public {
+        // Deploy implementation
+        khaaliSplitFriends impl = new khaaliSplitFriends();
+
+        // Deploy proxy with initializer
+        bytes memory initData = abi.encodeCall(
+            khaaliSplitFriends.initialize,
+            (backend, owner)
+        );
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), initData);
+        friends = khaaliSplitFriends(address(proxy));
+    }
+
+    // ──────────────────────────────────────────────
+    //  Initialization
+    // ──────────────────────────────────────────────
+
+    function test_initialize_setsState() public view {
+        assertEq(friends.backend(), backend);
+        assertEq(friends.owner(), owner);
+    }
+
+    function test_initialize_cannotReinitialize() public {
+        vm.expectRevert();
+        friends.initialize(backend, owner);
+    }
+
+    // ──────────────────────────────────────────────
+    //  PubKey registration
+    // ──────────────────────────────────────────────
+
+    function test_registerPubKey_byBackend() public {
+        vm.prank(backend);
+        friends.registerPubKey(alice, alicePubKey);
+
+        assertTrue(friends.registered(alice));
+        assertEq(friends.getPubKey(alice), alicePubKey);
+    }
+
+    function test_registerPubKey_emitsEvent() public {
+        vm.prank(backend);
+        vm.expectEmit(true, false, false, true);
+        emit khaaliSplitFriends.PubKeyRegistered(alice, alicePubKey);
+        friends.registerPubKey(alice, alicePubKey);
+    }
+
+    function test_registerPubKey_notBackend_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.NotBackend.selector);
+        friends.registerPubKey(alice, alicePubKey);
+    }
+
+    function test_registerPubKey_alreadyRegistered_reverts() public {
+        vm.prank(backend);
+        friends.registerPubKey(alice, alicePubKey);
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitFriends.AlreadyRegistered.selector, alice)
+        );
+        friends.registerPubKey(alice, alicePubKey);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Friend requests
+    // ──────────────────────────────────────────────
+
+    function _registerAliceAndBob() internal {
+        vm.startPrank(backend);
+        friends.registerPubKey(alice, alicePubKey);
+        friends.registerPubKey(bob, bobPubKey);
+        vm.stopPrank();
+    }
+
+    function test_requestFriend_success() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendRequested(alice, bob);
+        friends.requestFriend(bob);
+
+        assertTrue(friends.pendingRequest(alice, bob));
+    }
+
+    function test_requestFriend_notRegistered_sender_reverts() public {
+        vm.prank(backend);
+        friends.registerPubKey(bob, bobPubKey);
+
+        vm.prank(alice); // alice not registered
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitFriends.NotRegistered.selector, alice)
+        );
+        friends.requestFriend(bob);
+    }
+
+    function test_requestFriend_notRegistered_target_reverts() public {
+        vm.prank(backend);
+        friends.registerPubKey(alice, alicePubKey);
+
+        vm.prank(alice);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitFriends.NotRegistered.selector, bob)
+        );
+        friends.requestFriend(bob); // bob not registered
+    }
+
+    function test_requestFriend_self_reverts() public {
+        vm.prank(backend);
+        friends.registerPubKey(alice, alicePubKey);
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.CannotFriendSelf.selector);
+        friends.requestFriend(alice);
+    }
+
+    function test_requestFriend_alreadyFriends_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        friends.requestFriend(bob);
+        vm.prank(bob);
+        friends.acceptFriend(alice);
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.AlreadyFriends.selector);
+        friends.requestFriend(bob);
+    }
+
+    function test_requestFriend_alreadyRequested_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        friends.requestFriend(bob);
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.AlreadyRequested.selector);
+        friends.requestFriend(bob);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Accept friend
+    // ──────────────────────────────────────────────
+
+    function test_acceptFriend_success() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        friends.requestFriend(bob);
+
+        vm.prank(bob);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendAccepted(bob, alice);
+        friends.acceptFriend(alice);
+
+        assertTrue(friends.isFriend(alice, bob));
+        assertTrue(friends.isFriend(bob, alice));
+        assertFalse(friends.pendingRequest(alice, bob));
+    }
+
+    function test_acceptFriend_noPending_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(bob);
+        vm.expectRevert(khaaliSplitFriends.NoPendingRequest.selector);
+        friends.acceptFriend(alice);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Views
+    // ──────────────────────────────────────────────
+
+    function test_getFriends_returnsList() public {
+        _registerAliceAndBob();
+        vm.prank(backend);
+        friends.registerPubKey(charlie, charliePubKey);
+
+        // alice -> bob
+        vm.prank(alice);
+        friends.requestFriend(bob);
+        vm.prank(bob);
+        friends.acceptFriend(alice);
+
+        // alice -> charlie
+        vm.prank(alice);
+        friends.requestFriend(charlie);
+        vm.prank(charlie);
+        friends.acceptFriend(alice);
+
+        address[] memory aliceFriends = friends.getFriends(alice);
+        assertEq(aliceFriends.length, 2);
+        assertEq(aliceFriends[0], bob);
+        assertEq(aliceFriends[1], charlie);
+
+        address[] memory bobFriends = friends.getFriends(bob);
+        assertEq(bobFriends.length, 1);
+        assertEq(bobFriends[0], alice);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Admin
+    // ──────────────────────────────────────────────
+
+    function test_setBackend_onlyOwner() public {
+        address newBackend = makeAddr("newBackend");
+
+        vm.prank(owner);
+        friends.setBackend(newBackend);
+        assertEq(friends.backend(), newBackend);
+    }
+
+    function test_setBackend_notOwner_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        friends.setBackend(alice);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Upgrade
+    // ──────────────────────────────────────────────
+
+    function test_upgrade_onlyOwner() public {
+        khaaliSplitFriends newImpl = new khaaliSplitFriends();
+
+        vm.prank(owner);
+        friends.upgradeToAndCall(address(newImpl), "");
+    }
+
+    function test_upgrade_notOwner_reverts() public {
+        khaaliSplitFriends newImpl = new khaaliSplitFriends();
+
+        vm.prank(alice);
+        vm.expectRevert();
+        friends.upgradeToAndCall(address(newImpl), "");
+    }
+}
