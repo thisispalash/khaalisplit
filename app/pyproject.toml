@@ -1,5 +1,5 @@
 [project]
-name = "khaalisplit"
+name = "khaaliSplit"
 version = "0.1.0"
 description = "A censorship resistant way to split payments with friends and strangers"
 authors = [
