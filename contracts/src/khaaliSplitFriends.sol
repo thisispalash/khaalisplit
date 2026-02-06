@@ -42,6 +42,7 @@ contract khaaliSplitFriends is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     event PubKeyRegistered(address indexed user, bytes pubKey);
     event FriendRequested(address indexed from, address indexed to);
     event FriendAccepted(address indexed user, address indexed friend);
+    event FriendRemoved(address indexed user, address indexed friend);
 
     // ──────────────────────────────────────────────
     //  Errors
@@ -54,6 +55,7 @@ contract khaaliSplitFriends is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     error AlreadyFriends();
     error AlreadyRequested();
     error NoPendingRequest();
+    error NotFriends();
 
     // ──────────────────────────────────────────────
     //  Initializer
@@ -144,6 +146,23 @@ contract khaaliSplitFriends is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         delete pendingRequest[requester][msg.sender];
 
         emit FriendAccepted(msg.sender, requester);
+    }
+
+    // ──────────────────────────────────────────────
+    //  Remove friend
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Removes a bidirectional friendship. Soft-delete only — does NOT
+     *         remove entries from `_friendsList` (indexer should filter by `isFriend`).
+     *         Does NOT cascade to group memberships.
+     * @param friend The address to unfriend.
+     */
+    function removeFriend(address friend) external {
+        if (!isFriend[msg.sender][friend]) revert NotFriends();
+        isFriend[msg.sender][friend] = false;
+        isFriend[friend][msg.sender] = false;
+        emit FriendRemoved(msg.sender, friend);
     }
 
     // ──────────────────────────────────────────────

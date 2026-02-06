@@ -244,6 +244,73 @@ contract khaaliSplitFriendsTest is Test {
     }
 
     // ──────────────────────────────────────────────
+    //  Remove friend
+    // ──────────────────────────────────────────────
+
+    function _makeFriends() internal {
+        _registerAliceAndBob();
+        vm.prank(alice);
+        friends.requestFriend(bob);
+        vm.prank(bob);
+        friends.acceptFriend(alice);
+    }
+
+    function test_removeFriend_success() public {
+        _makeFriends();
+
+        vm.prank(alice);
+        friends.removeFriend(bob);
+
+        assertFalse(friends.isFriend(alice, bob));
+        assertFalse(friends.isFriend(bob, alice));
+    }
+
+    function test_removeFriend_emitsEvent() public {
+        _makeFriends();
+
+        vm.prank(alice);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendRemoved(alice, bob);
+        friends.removeFriend(bob);
+    }
+
+    function test_removeFriend_notFriends_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.NotFriends.selector);
+        friends.removeFriend(bob);
+    }
+
+    function test_removeFriend_canReRequest() public {
+        _makeFriends();
+
+        // Remove
+        vm.prank(alice);
+        friends.removeFriend(bob);
+
+        // Re-request and re-accept
+        vm.prank(alice);
+        friends.requestFriend(bob);
+        vm.prank(bob);
+        friends.acceptFriend(alice);
+
+        assertTrue(friends.isFriend(alice, bob));
+        assertTrue(friends.isFriend(bob, alice));
+    }
+
+    function test_removeFriend_bothDirections() public {
+        _makeFriends();
+
+        // Bob removes alice (not just alice removes bob)
+        vm.prank(bob);
+        friends.removeFriend(alice);
+
+        assertFalse(friends.isFriend(alice, bob));
+        assertFalse(friends.isFriend(bob, alice));
+    }
+
+    // ──────────────────────────────────────────────
     //  Views
     // ──────────────────────────────────────────────
 
