@@ -1,0 +1,42 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A censorship resistant way to split payments with friends and strangers">
+    <meta name="author" content="@theprimefibber">
+    <meta name="robots" content="index, follow">
+
+    <title>
+      {% block title %}khaaliSplit{% endblock %}
+    </title>
+
+    <link rel="stylesheet" href="{% static 'css/tw.css' %}">
+    {% block extra_head %}{% endblock %}
+  </head>
+
+  <script src="{% static 'js/htmx@2.0.8.js' %}"></script>
+  <script src="{% static 'js/htmx-ext-ws@2.0.4.js' %}"></script>
+  <script src="{% static 'js/_hyperscript@0.9.14.js' %}"></script>
+
+  <body class="min-h-screen w-full bg-background text-foreground">
+
+    {% include 'components/header.html' %}
+
+    <main class="max-w-4xl mx-auto px-4 py-8">
+      {% block content %}
+      {% endblock %}
+    </main>
+
+    {% include 'components/footer.html' %}
+
+  </body>
+
+  {% if GOATCOUNTER_URL %}
+  <script src="{% static 'js/goat.js' %}" defer
+    data-goatcounter="{{ GOATCOUNTER_URL }}"></script>
+  {% endif %}
+
+</html>
