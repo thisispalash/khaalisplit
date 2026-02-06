@@ -109,9 +109,16 @@ contract khaaliSplitFriends is Initializable, UUPSUpgradeable, OwnableUpgradeabl
         if (isFriend[msg.sender][friend]) revert AlreadyFriends();
         if (pendingRequest[msg.sender][friend]) revert AlreadyRequested();
 
-        // TODO: If pendingRequest[friend][msg.sender] is true, auto-accept instead
-        //       of creating a second dangling request. Currently, mutual requests
-        //       leave one pendingRequest uncleaned after acceptFriend().
+        // If the other party already requested us, auto-accept
+        if (pendingRequest[friend][msg.sender]) {
+            isFriend[friend][msg.sender] = true;
+            isFriend[msg.sender][friend] = true;
+            _friendsList[friend].push(msg.sender);
+            _friendsList[msg.sender].push(friend);
+            delete pendingRequest[friend][msg.sender];
+            emit FriendAccepted(msg.sender, friend);
+            return;
+        }
 
         pendingRequest[msg.sender][friend] = true;
 

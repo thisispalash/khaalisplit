@@ -159,6 +159,63 @@ contract khaaliSplitFriendsTest is Test {
     }
 
     // ──────────────────────────────────────────────
+    //  Mutual request auto-accept
+    // ──────────────────────────────────────────────
+
+    function test_requestFriend_mutualRequest_autoAccepts() public {
+        _registerAliceAndBob();
+
+        // Bob requests alice first
+        vm.prank(bob);
+        friends.requestFriend(alice);
+        assertTrue(friends.pendingRequest(bob, alice));
+
+        // Alice requests bob → should auto-accept
+        vm.prank(alice);
+        friends.requestFriend(bob);
+
+        // Both should be friends now
+        assertTrue(friends.isFriend(alice, bob));
+        assertTrue(friends.isFriend(bob, alice));
+        // Pending request should be cleaned up
+        assertFalse(friends.pendingRequest(bob, alice));
+        assertFalse(friends.pendingRequest(alice, bob));
+        // Both should appear in each other's friend lists
+        assertEq(friends.getFriends(alice).length, 1);
+        assertEq(friends.getFriends(alice)[0], bob);
+        assertEq(friends.getFriends(bob).length, 1);
+        assertEq(friends.getFriends(bob)[0], alice);
+    }
+
+    function test_requestFriend_mutualRequest_emitsFriendAccepted() public {
+        _registerAliceAndBob();
+
+        vm.prank(bob);
+        friends.requestFriend(alice);
+
+        // When alice requests bob, expect FriendAccepted (NOT FriendRequested)
+        vm.prank(alice);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendAccepted(alice, bob);
+        friends.requestFriend(bob);
+    }
+
+    function test_requestFriend_mutualRequest_thenAlreadyFriends() public {
+        _registerAliceAndBob();
+
+        // Mutual request → auto-accept
+        vm.prank(bob);
+        friends.requestFriend(alice);
+        vm.prank(alice);
+        friends.requestFriend(bob);
+
+        // Re-requesting should revert with AlreadyFriends
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.AlreadyFriends.selector);
+        friends.requestFriend(bob);
+    }
+
+    // ──────────────────────────────────────────────
     //  Accept friend
     // ──────────────────────────────────────────────
 
