@@ -17,8 +17,35 @@ optimizer_runs = 200
 bytecode_hash = "none"
 cbor_metadata = false
 
+# Don't auto-detect remappings from libs (causes conflicts)
+auto_detect_remappings = false
+
+# Exclude all library test/certora/script dirs that have broken internal imports
+deny_paths = [
+  "lib/openzeppelin-contracts/test",
+  "lib/openzeppelin-contracts/scripts",
+  "lib/openzeppelin-contracts/certora",
+  "lib/openzeppelin-contracts-upgradeable/test",
+  "lib/openzeppelin-contracts-upgradeable/scripts",
+  "lib/openzeppelin-contracts-upgradeable/certora",
+  "lib/openzeppelin-contracts-upgradeable/contracts/mocks",
+  "lib/openzeppelin-contracts-upgradeable/lib",
+  "lib/ens-contracts/test",
+  "lib/ens-contracts/deploy",
+  "lib/ens-contracts/contracts/reverseResolver",
+  "lib/ens-contracts/contracts/reverseRegistrar",
+  "lib/ens-contracts/contracts/ccipRead",
+  "lib/ens-contracts/contracts/universalResolver",
+  "lib/ens-contracts/contracts/ethregistrar",
+  "lib/ens-contracts/contracts/wrapper",
+  "lib/ens-contracts/contracts/root",
+  "lib/ens-contracts/contracts/dnssec-oracle",
+  "lib/ens-contracts/contracts/dnsregistrar",
+]
+
 # Remappings
 remappings = [
+  "forge-std/=lib/forge-std/src/",
   "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
   "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
   "@ensdomains/ens-contracts/=lib/ens-contracts/contracts/",
