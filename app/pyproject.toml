@@ -19,7 +19,26 @@ dependencies = [
     "unique-names-generator (>=1.0.2,<2.0.0)"
 ]
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.15.0"
+
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+# Ruff Config
+
+[tool.ruff]
+line-length = 100
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+# E = pycodestyle errors, F = pyflakes, I = isort
+# N = pep8-naming, W = warnings, UP = pyupgrade
+
