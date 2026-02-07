@@ -1,0 +1,48 @@
+<div class="flex items-center justify-between p-3 border border-foreground/5 rounded"
+  id="expense-{{ expense.expense_id }}">
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-medium truncate">
+        {{ expense.description|default:"Encrypted expense" }}
+      </span>
+      {% if expense.category %}
+        <span class="text-xs text-foreground/40 bg-foreground/5 px-1.5 py-0.5 rounded">
+          {{ expense.category }}
+        </span>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-3 mt-1 text-xs text-foreground/40">
+      <span>by {{ expense.creator.subname }}</span>
+      <span>{{ expense.split_type }}</span>
+      <span>{{ expense.created_at|timesince }} ago</span>
+    </div>
+  </div>
+  <div class="text-right ml-3">
+    {% if expense.amount %}
+      <span class="font-mono text-sm font-medium">{{ expense.amount }}</span>
+    {% else %}
+      <span class="text-xs text-foreground/30 italic"
+        _="on load
+             if window.khaaliCrypto and window.khaaliCrypto.groupKey
+               set decrypted to await window.khaaliCrypto.decrypt('{{ expense.encrypted_data|escapejs }}')
+               if decrypted
+                 set data to JSON.parse(decrypted)
+                 set my textContent to data.amount
+                 htmx.ajax('POST', '/api/expenses/{{ expense.expense_id }}/update/', {
+                   values: {
+                     amount: data.amount,
+                     description: data.description,
+                     category: data.category or '',
+                     split_type: data.split_type or 'equal',
+                     csrfmiddlewaretoken: document.querySelector('[name=csrfmiddlewaretoken]').value
+                   }
+                 })
+               end
+             end
+           end"
+      >
+        encrypted
+      </span>
+    {% endif %}
+  </div>
+</div>

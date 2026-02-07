@@ -4,6 +4,7 @@ from api.views import auth as auth_views
 from api.views import ens_gateway
 from api.views import friends as friends_views
 from api.views import groups as groups_views
+from api.views import expenses as expenses_views
 
 app_name = 'api'
 
@@ -32,7 +33,11 @@ urlpatterns = [
   path('groups/<int:group_id>/members/', groups_views.members, name='groups-members'),
   path('groups/<int:group_id>/balances/', groups_views.balances, name='groups-balances'),
 
-  # Expenses (Step 9)
+  # Expenses
+  path('expenses/<int:group_id>/add/', expenses_views.add, name='expenses-add'),
+  path('expenses/<int:group_id>/list/', expenses_views.expense_list, name='expenses-list'),
+  path('expenses/<int:expense_id>/update/', expenses_views.update, name='expenses-update'),
+
   # Settlement (Step 10)
   # Activity (Step 11)
   # ENS Gateway
