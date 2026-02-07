@@ -6,10 +6,9 @@ Follows the vps-orchestration pattern (unhinged_lander).
 import os
 from pathlib import Path
 
-import dj_database_url
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -93,16 +92,16 @@ WSGI_APPLICATION = 'config.wsgi.khaaliSplit'
 # ---------------- Database ------------------------------------------------ #
 
 DATABASES = {
-  'default': dj_database_url.config(
-    default=(
-      f'postgresql://{os.getenv("PG_USER")}:{os.getenv("PG_PASS")}'
-      f'@{os.getenv("PG_HOST")}:{os.getenv("PG_PORT")}'
-      f'/{os.getenv("PG_DATABASE")}'
-    ),
-    conn_max_age=600,
-  )
+  'default': {
+    'ENGINE': 'django.db.backends.postgresql',
+    'NAME': os.getenv('PG_DATABASE', ''),
+    'USER': os.getenv('PG_USER', ''),
+    'PASSWORD': os.getenv('PG_PASS', ''),
+    'HOST': os.getenv('PG_HOST', ''),
+    'PORT': os.getenv('PG_PORT', '5432'),
+    'CONN_MAX_AGE': 600,
+  }
 }
-
 
 # ---------------- Auth ---------------------------------------------------- #
 

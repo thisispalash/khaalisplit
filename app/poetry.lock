@@ -795,21 +795,6 @@ cython = ["cython (>=0.29)"]
 test = ["pytest"]
 
 [[package]]
-name = "dj-database-url"
-version = "3.1.0"
-description = "Use Database URLs in your Django Application."
-optional = false
-python-versions = ">=3.10"
-groups = ["main"]
-files = [
-    {file = "dj_database_url-3.1.0-py3-none-any.whl", hash = "sha256:155a56fbbecbaaf1348ccd73bf29138b4c9988363ba08261a0f0145e392e638c"},
-    {file = "dj_database_url-3.1.0.tar.gz", hash = "sha256:d80218426b83f9302c8d27d4fccf52de5cf0cab179f0645fb2839f37605d1353"},
-]
-
-[package.dependencies]
-django = ">=4.2"
-
-[[package]]
 name = "django"
 version = "6.0.2"
 description = "A high-level Python web framework that encourages rapid development and clean, pragmatic design."
@@ -2487,4 +2472,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">3.13,<4"
-content-hash = "4ec94fde331a2a9d96c0ce80df1f5d4cea2d4f631987e1a691bc93b892366b94"
+content-hash = "2979019779f178a6cc1dbe2edeb26b8daf9c587792088a30ecc1265766088df4"
