@@ -20,12 +20,27 @@
   <script src="{% static 'js/htmx@2.0.8.js' %}"></script>
   <script src="{% static 'js/htmx-ext-ws@2.0.4.js' %}"></script>
   <script src="{% static 'js/_hyperscript@0.9.14.js' %}"></script>
+  <script src="{% static 'js/ethers@6.7.0.js' %}"></script>
 
-  <body class="min-h-screen w-full bg-background text-foreground">
+  <body
+    class="min-h-screen w-full bg-background text-foreground flex flex-col"
+    _="
+      on load
+        set global walletConnected to false
+        set global walletAddress to ''
+        set global walletChainId to 0
+      end
+    "
+  >
 
     {% include 'components/header.html' %}
 
-    <main class="max-w-4xl mx-auto px-4 py-8">
+    {# Toast container for OOB swaps #}
+    <div id="toast-container"
+      class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
+    ></div>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 flex-1 w-full">
       {% block content %}
       {% endblock %}
     </main>
@@ -33,6 +48,8 @@
     {% include 'components/footer.html' %}
 
   </body>
+
+  {% block extra_js %}{% endblock %}
 
   {% if GOATCOUNTER_URL %}
   <script src="{% static 'js/goat.js' %}" defer
