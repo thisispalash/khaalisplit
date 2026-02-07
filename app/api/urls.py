@@ -6,6 +6,7 @@ from api.views import friends as friends_views
 from api.views import groups as groups_views
 from api.views import expenses as expenses_views
 from api.views import settlement as settlement_views
+from api.views import activity as activity_views
 
 app_name = 'api'
 
@@ -44,7 +45,9 @@ urlpatterns = [
   path('settle/<int:group_id>/initiate/', settlement_views.initiate, name='settle-initiate'),
   path('settle/status/<str:tx_hash>/', settlement_views.status, name='settle-status'),
 
-  # Activity (Step 11)
+  # Activity
+  path('activity/load-more/', activity_views.load_more, name='activity-load-more'),
+
   # ENS Gateway
   path('ens-gateway/<str:sender>/<str:data>.json', ens_gateway.ccip_read, name='ens-gateway'),
 ]
