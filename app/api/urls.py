@@ -2,6 +2,7 @@ from django.urls import path
 
 from api.views import auth as auth_views
 from api.views import ens_gateway
+from api.views import friends as friends_views
 
 app_name = 'api'
 
@@ -15,7 +16,13 @@ urlpatterns = [
   path('auth/address/verify/', auth_views.verify_signature, name='verify-signature'),
   path('auth/pubkey/register/', auth_views.register_pubkey, name='register-pubkey'),
 
-  # Friends (Step 7)
+  # Friends
+  path('friends/search/', friends_views.search, name='friends-search'),
+  path('friends/request/<str:subname>/', friends_views.send_request, name='friends-request'),
+  path('friends/accept/<str:address>/', friends_views.accept, name='friends-accept'),
+  path('friends/remove/<str:address>/', friends_views.remove, name='friends-remove'),
+  path('friends/pending/', friends_views.pending, name='friends-pending'),
+
   # Groups (Step 8)
   # Expenses (Step 9)
   # Settlement (Step 10)
