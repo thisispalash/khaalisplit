@@ -83,7 +83,7 @@ class WideEventLoggingMiddleware:
       'subname': subname,
       'user_agent': request.META.get('HTTP_USER_AGENT', ''),
       'content_type': getattr(request, 'content_type', ''),
-      'is_htmx': getattr(request, 'htmx', False) and bool(request.htmx),
+      'is_htmx': bool(getattr(request, 'htmx', False)),
       'errors': request._wide_event.get('errors', []),
       'extra': request._wide_event.get('extra', {}),
     }
