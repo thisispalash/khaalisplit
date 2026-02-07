@@ -372,6 +372,55 @@ FAILURE_DELTA = 5
 - `ReputationUpdated(address indexed user, uint256 newScore, bool wasSuccess)`
 - `UserNodeSet(address indexed user, bytes32 indexed node)`
 
+### Implementation Notes (2026-02-07)
+
+**Branch:** `contracts-reputation` (off `contracts` at `7279b7d`)
+**Worktree:** `src/contracts-reputation/`
+
+**Deviations from plan:**
+- **`initialize` signature changed:** `initialize(address _backend, address _subnameRegistry, address _settlementContract, address _owner)` — added `_settlementContract` param. The settlement contract (not the backend) is the authorized caller for `recordSettlement()`. This removes the need for a trusted backend relay for score updates — the settlement contract calls reputation directly after each settlement.
+- **`settlementContract` storage added:** New `address public settlementContract` field. `recordSettlement()` checks `msg.sender == settlementContract` instead of `msg.sender == backend`.
+- **`_initialized` mapping renamed to `_hasRecord`:** Clearer intent — tracks whether a user has had at least one settlement recorded. Needed to distinguish "default 50" from "score dropped to exactly 50 after updates". No storage savings vs. the plan (we still need the mapping because score=0 is a valid state after many failures).
+- **`recordSettlement` reverts if `userNodes[user] == bytes32(0)`:** Added `UserNodeNotSet()` custom error. Users must complete onboarding (subname registration → setUserNode) before settlements can update their reputation. TODO: revisit what happens in a trustless scenario — users interacting outside the client won't have a node set.
+- **`setUserNode` guards against zero address and zero node:** Added `ZeroAddress()` and `ZeroNode()` custom errors.
+- **Three admin setters added:** `setBackend()`, `setSubnameRegistry()`, `setSettlementContract()` — all owner-only. `setSubnameRegistry` and `setSettlementContract` allow `address(0)` (disable functionality). `setBackend` requires non-zero.
+- **Additional events:** `BackendUpdated`, `SubnameRegistryUpdated`, `SettlementContractUpdated` — emitted by admin setters.
+
+**What was completed:**
+- `src/interfaces/IkhaaliSplitReputation.sol` — full interface
+- `src/khaaliSplitReputation.sol` — full contract (UUPS, init, recordSettlement, setUserNode, getReputation, admin setters, _syncToENS, _hasRecord tracking)
+- `test/helpers/MockSubnames.sol` — mock with setText, text, call recording, forced revert toggle
+- `test/khaaliSplitReputation.t.sol` — 60 unit tests (all passing)
+
+**Test coverage (60 tests):**
+- Initialization: state, reinit revert, zero-address reverts (backend, owner), zero subnameRegistry allowed, zero settlementContract allowed
+- Constants: DEFAULT_SCORE, MAX_SCORE, MIN_SCORE, SUCCESS_DELTA, FAILURE_DELTA
+- getReputation: default for unknown user, default before settlement, after success, after failure
+- recordSettlement — success: increments score, emits event, multiple successes, capped at 100, stays at 100
+- recordSettlement — failure: decrements score, emits event, multiple failures, floored at 0, stays at 0
+- recordSettlement — mixed: success then failure, failure then success
+- recordSettlement — ENS sync: syncs to ENS, multiple updates with correct values, no sync when registry is zero, correct node per user, correct string at 0, correct string at 100
+- recordSettlement — auth: not settlement contract reverts, backend reverts, owner reverts, userNodeNotSet reverts
+- setUserNode: success, multiple users, not backend reverts, owner reverts, settlement reverts, zero user reverts, zero node reverts
+- Admin — setBackend: success, not owner reverts, zero address reverts, old backend loses auth
+- Admin — setSubnameRegistry: success, allows zero, not owner reverts
+- Admin — setSettlementContract: success, allows zero, not owner reverts, old settlement loses auth
+- Multi-user: scores are independent
+- Edge cases: first call initializes to default, score at 5 → failure → 0 (exact boundary), score at 1 → failure → 0 (underflow protection), score at 99 → success → 100 (exact boundary)
+- Upgrades: owner only, not owner reverts, state preservation after upgrade
+- Implementation: cannot initialize directly
+
+**What remains for reputation (deployment / integration):**
+- `DeployCore.s.sol` update to deploy reputation proxy and wire to subnames + settlement
+- Wire `subnames.setReputationContract(reputationProxy)` in deploy script
+- Settlement contract integration: settlement must call `reputation.recordSettlement(user, true/false)` after each settlement
+
+**Integration tests that should be added (`UserFlows.t.sol`):**
+1. **Reputation recording flow:** Deploy reputation + subnames proxies → wire reputation contract on subnames → backend registers subname and sets user node → settlement contract calls recordSettlement → verify score updated and ENS text record synced
+2. **Full onboarding → settle → reputation flow:** Deploy all proxies → register subname → set user node → settlement calls recordSettlement(user, true) → verify text("com.khaalisplit.reputation") returns "51" on subnames contract
+3. **Multi-user reputation isolation:** Register two users → record different outcomes for each → verify independent scores and independent ENS syncs
+4. **Wiring verification:** Deploy reputation with settlementContract=address(0) → verify recordSettlement reverts from any caller → owner sets settlementContract → verify it now works from that address only
+
 ---
 
 ## Deployment Script Changes
