@@ -280,6 +280,47 @@ Add NatSpec deprecation notice to `khaaliSplitResolver.sol`:
          Kept for reference only.
 ```
 
+### Implementation Notes (2026-02-07)
+
+**Branch:** `contracts-subnames` (off `contracts` at `9aa3982`)
+**Worktree:** `src/contracts-subnames/`
+
+**Deviations from plan:**
+- **No `INameWrapperMinimal.sol` created.** Instead, removed `wrapper/` and `ethregistrar/` from `deny_paths` in `foundry.toml` and imported the official `INameWrapper` from `@ensdomains/ens-contracts/wrapper/INameWrapper.sol` directly. Only the wrapper `mocks/` and `test/` subdirs remain in deny_paths.
+- **Storage type uses `INameWrapper`** instead of `INameWrapperMinimal` — no functional difference, just uses the real interface.
+- **`_isAuthorized` checks `reputationContract != address(0)`** before granting auth, preventing `address(0)` from being treated as authorized when reputation contract is not yet set.
+- **`register()` includes a duplicate-check** via `nameWrapper.ownerOf()` — reverts with `SubnameAlreadyRegistered` if the node already has an owner.
+
+**What was completed:**
+- `src/interfaces/IkhaaliSplitSubnames.sol` — full interface
+- `src/khaaliSplitSubnames.sol` — full contract (UUPS, init, register, setText, setAddr, text, addr, subnameNode, supportsInterface, admin setters, _isAuthorized)
+- `test/helpers/MockNameWrapper.sol` — mock with setSubnodeRecord, ownerOf, test helpers
+- `test/khaaliSplitSubnames.t.sol` — 47 unit tests (all passing)
+- `src/khaaliSplitResolver.sol` — deprecation NatSpec added
+- `foundry.toml` — deny_paths updated
+
+**Test coverage (47 tests):**
+- Initialization: state, reinit revert, zero-address reverts (nameWrapper, backend, owner)
+- Registration: success + events, default text records, default addr, multiple subnames, auth (not backend, not owner), empty label, zero address, duplicate label
+- setText: by owner, by backend, by reputation contract, overwrite, multiple keys, unauthorized, cross-subname unauthorized, reputation contract zero-address safety
+- setAddr: by owner, by backend, unauthorized
+- Getters: unregistered node returns empty/zero, unset key returns empty
+- subnameNode: computation correctness, different labels, consistency
+- ERC-165: IAddrResolver, ITextResolver, IERC165, unsupported returns false
+- Admin: setBackend (success, not owner, zero address, old backend loses auth), setReputationContract (success, allows zero, not owner)
+- Upgrades: owner only, not owner reverts, state preservation after upgrade
+- Implementation: cannot initialize directly
+
+**What remains for subnames (deployment / integration):**
+- `DeployCore.s.sol` update to deploy subnames proxy and wire reputation contract
+- Integration tests in `UserFlows.t.sol` (see below)
+
+**Integration tests that should be added (`UserFlows.t.sol`):**
+1. **Subname registration flow:** Deploy subnames proxy → backend registers a subname → verify text("com.khaalisplit.subname") and addr() return correct values → owner sets custom text records (display, avatar) → verify reads
+2. **Reputation sync flow:** Deploy subnames + reputation proxies → wire reputation contract → backend registers subname and sets user node → reputation contract calls setText to update score → verify text("com.khaalisplit.reputation") updated on subnames contract
+3. **End-to-end register → settle → reputation → ENS sync:** Register subname → settle expense → backend calls recordSettlement on reputation → reputation syncs score to ENS text record → verify final score via subnames.text()
+4. **Authorization boundary test:** Register two subnames for different users → verify neither can modify the other's records → verify backend can modify both → verify reputation contract can modify both
+
 ---
 
 ## Change 3: Reputation — On-Chain Scoring
