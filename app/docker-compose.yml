@@ -11,8 +11,8 @@
 services:
 
   # ---------------- dev ----------------------------------------------------- #
-  khaaliSplit-dev:
-    container_name: khaaliSplit_dev
+  khaalisplit:
+    container_name: khaalisplit_dev
     build: .
     command: make dev
     environment:
@@ -29,8 +29,8 @@ services:
       - dev
 
   # ---------------- prod ---------------------------------------------------- #
-  khaaliSplit:
-    container_name: khaaliSplit
+  khaalisplit_prod:
+    container_name: khaalisplit
     build: .
     command: make prod
     restart: always
@@ -39,7 +39,7 @@ services:
     env_file:
       - .env
     volumes:
-      - khaaliSplit_static:/app/static
+      - khaalisplit_static:/app/static
     networks:
       - kdio_network
     profiles:
@@ -50,4 +50,4 @@ networks:
     external: true
 
 volumes:
-  khaaliSplit_static:
+  khaalisplit_static:
