@@ -36,11 +36,12 @@ deny_paths = [
   "lib/ens-contracts/contracts/reverseRegistrar",
   "lib/ens-contracts/contracts/ccipRead",
   "lib/ens-contracts/contracts/universalResolver",
-  "lib/ens-contracts/contracts/ethregistrar",
-  "lib/ens-contracts/contracts/wrapper",
   "lib/ens-contracts/contracts/root",
   "lib/ens-contracts/contracts/dnssec-oracle",
   "lib/ens-contracts/contracts/dnsregistrar",
+  # wrapper/ and ethregistrar/ removed — needed for INameWrapper imports in khaaliSplitSubnames
+  "lib/ens-contracts/contracts/wrapper/mocks",
+  "lib/ens-contracts/contracts/wrapper/test",
 ]
 
 # Remappings
