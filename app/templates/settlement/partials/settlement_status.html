@@ -1,0 +1,46 @@
+<div class="p-3 border border-foreground/10 rounded-md"
+  id="settlement-{{ settlement.tx_hash }}"
+  {% if settlement.status == 'submitted' or settlement.status == 'bridging' %}
+    hx-get="/api/settle/status/{{ settlement.tx_hash }}/"
+    hx-trigger="every 5s"
+    hx-swap="outerHTML"
+  {% endif %}
+>
+  <div class="flex items-center justify-between">
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="font-mono text-xs truncate">{{ settlement.tx_hash|truncatechars:18 }}</span>
+        {% if settlement.status == 'pending' %}
+          <span class="text-xs text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded">
+            Pending
+          </span>
+        {% elif settlement.status == 'submitted' %}
+          <span class="text-xs text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">
+            Submitted
+          </span>
+        {% elif settlement.status == 'bridging' %}
+          <span class="text-xs text-purple-400 bg-purple-400/10 px-1.5 py-0.5 rounded animate-pulse">
+            Bridging
+          </span>
+        {% elif settlement.status == 'confirmed' %}
+          <span class="text-xs text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">
+            Confirmed
+          </span>
+        {% elif settlement.status == 'failed' %}
+          <span class="text-xs text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded">
+            Failed
+          </span>
+        {% endif %}
+      </div>
+      <div class="text-xs text-foreground/40 mt-1">
+        {{ settlement.from_user.subname|default:settlement.from_address|truncatechars:10 }}
+        &rarr;
+        {{ settlement.to_user.subname|default:settlement.to_address|truncatechars:10 }}
+      </div>
+    </div>
+    <div class="text-right ml-3">
+      <span class="font-mono text-sm">{{ settlement.amount }} {{ settlement.token|upper }}</span>
+      <div class="text-xs text-foreground/30">{{ settlement.created_at|timesince }} ago</div>
+    </div>
+  </div>
+</div>

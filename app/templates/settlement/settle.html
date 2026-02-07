@@ -1,10 +1,38 @@
 {% extends "base.html" %}
 
-{% block title %}Settle — khaaliSplit{% endblock %}
+{% block title %}Settle Up — {{ group.name|default:"Group" }} — khaaliSplit{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-  <h1 class="text-2xl font-bold">Settle Up</h1>
-  <p class="text-foreground/40 text-sm">Settlement coming in Step 10.</p>
+
+  <div>
+    <a href="/groups/{{ group.group_id }}/"
+      class="text-sm text-foreground/40 hover:text-foreground/60 transition-colors">
+      &larr; Back to {{ group.name|default:"Group" }}
+    </a>
+    <h1 class="text-2xl font-bold mt-2">Settle Up</h1>
+    <p class="text-sm text-foreground/50">
+      Simplified debts for {{ group.name|default:"this group" }}
+    </p>
+  </div>
+
+  {# Debt summary — loaded via HTMX #}
+  <div id="debt-summary"
+    hx-get="/api/settle/{{ group.group_id }}/debts/"
+    hx-trigger="load"
+    hx-swap="innerHTML">
+    {% include 'partials/loading.html' %}
+  </div>
+
+  {# Active settlements #}
+  <div class="space-y-3">
+    <h2 class="text-sm font-medium text-foreground/60">Recent Settlements</h2>
+    <div id="settlement-list" class="space-y-2">
+      <p class="text-foreground/40 text-sm">
+        No recent settlements for this group.
+      </p>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
