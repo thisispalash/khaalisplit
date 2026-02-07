@@ -136,9 +136,18 @@ def verify_signature(request):
   if not all([address, signature, message]):
     return HttpResponse('Missing address, signature, or message', status=400)
 
-  # Signature verification is implemented in Step 5 (web3_utils)
-  # For now, accept the address and create a LinkedAddress
+  # Verify the signature matches the claimed address
   from api.models import BurntAddress, LinkedAddress
+  from api.utils.web3_utils import recover_pubkey, verify_signature as verify_sig
+
+  if not verify_sig(address, message, signature):
+    return HttpResponse('Signature verification failed', status=400)
+
+  # Recover public key for ECDH
+  try:
+    pub_key = recover_pubkey(message, signature)
+  except Exception:
+    pub_key = ''
 
   # Check if address is burnt
   if BurntAddress.objects.filter(address=address).exists():
@@ -155,6 +164,7 @@ def verify_signature(request):
     address=address,
     defaults={
       'is_primary': not request.user.addresses.filter(is_primary=True).exists(),
+      'pub_key': pub_key,
     },
   )
 
@@ -174,3 +184,54 @@ def verify_signature(request):
       'success': True,
     })
   return redirect('/')
+
+
+@require_POST
+def register_pubkey(request):
+  """
+  Register a user's public key on-chain via the backend wallet.
+  Expects JSON body: { address }
+  The pub_key is already stored from verify_signature.
+  """
+  if not request.user.is_authenticated:
+    return HttpResponse(status=401)
+
+  try:
+    data = json.loads(request.body)
+    address = data.get('address', '')
+  except (json.JSONDecodeError, AttributeError):
+    return HttpResponse('Invalid JSON', status=400)
+
+  if not address:
+    return HttpResponse('Missing address', status=400)
+
+  from api.models import LinkedAddress
+  from api.utils.web3_utils import register_pubkey_onchain
+
+  linked = LinkedAddress.objects.filter(user=request.user, address=address).first()
+  if not linked:
+    return HttpResponse('Address not linked to your account', status=404)
+
+  if linked.pub_key_registered:
+    return HttpResponse('Public key already registered', status=409)
+
+  if not linked.pub_key:
+    return HttpResponse('No public key found. Re-verify your signature.', status=400)
+
+  try:
+    tx_hash = register_pubkey_onchain(address, linked.pub_key)
+    linked.pub_key_registered = True
+    linked.save()
+
+    Activity.objects.create(
+      user=request.user,
+      action_type=Activity.ActionType.PUBKEY_REGISTERED,
+      message=f'Public key registered for {address[:8]}...{address[-4:]}',
+      metadata={'address': address, 'tx_hash': tx_hash},
+    )
+
+    request._wide_event['extra']['pubkey_tx'] = tx_hash
+    return HttpResponse(json.dumps({'tx_hash': tx_hash}), content_type='application/json')
+  except Exception as e:
+    logger.exception('registerPubKey failed')
+    return HttpResponse(f'Registration failed: {e}', status=500)

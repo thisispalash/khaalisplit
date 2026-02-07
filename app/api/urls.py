@@ -12,6 +12,7 @@ urlpatterns = [
   path('auth/onboarding/profile/', auth_views.onboarding_profile_view, name='onboarding-profile'),
   path('auth/onboarding/wallet/', auth_views.onboarding_wallet_view, name='onboarding-wallet'),
   path('auth/address/verify/', auth_views.verify_signature, name='verify-signature'),
+  path('auth/pubkey/register/', auth_views.register_pubkey, name='register-pubkey'),
 
   # Friends (Step 7)
   # Groups (Step 8)
