@@ -1,6 +1,7 @@
 from django.urls import path
 
 from api.views import auth as auth_views
+from api.views import ens_gateway
 
 app_name = 'api'
 
@@ -19,5 +20,6 @@ urlpatterns = [
   # Expenses (Step 9)
   # Settlement (Step 10)
   # Activity (Step 11)
-  # ENS Gateway (Step 6)
+  # ENS Gateway
+  path('ens-gateway/<str:sender>/<str:data>.json', ens_gateway.ccip_read, name='ens-gateway'),
 ]
