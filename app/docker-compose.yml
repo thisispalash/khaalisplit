@@ -21,6 +21,7 @@ services:
       - .env
     volumes:
       - .:/app
+      - khaalisplit_static:/app/static
     ports:
       - "8002:8000"
     networks:
@@ -39,7 +40,7 @@ services:
     env_file:
       - .env
     volumes:
-      - khaalisplit_static:/app/static
+      - khaalisplit_static:/app/staticfiles
     networks:
       - kdio_network
     profiles:
@@ -51,3 +52,4 @@ networks:
 
 volumes:
   khaalisplit_static:
+    name: khaalisplit_static
