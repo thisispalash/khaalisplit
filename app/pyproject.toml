@@ -1,0 +1,44 @@
+[project]
+name = "khaaliSplit"
+version = "0.1.0"
+description = "A censorship resistant way to split payments with friends and strangers"
+authors = [
+    {name = "Palash A.",email = "palash.agarwal.96@gmail.com"}
+]
+license = {text = "Apache-2.0"}
+readme = "README.md"
+requires-python = ">3.13,<4"
+dependencies = [
+    "django (>=6.0.2,<7.0.0)",
+    "django-htmx (>=1.27.0,<2.0.0)",
+    "psycopg2-binary (>=2.9.11,<3.0.0)",
+    "web3 (>=7.14.1,<8.0.0)",
+    "python-dotenv (>=1.2.1,<2.0.0)",
+    "gunicorn (>=25.0.2,<26.0.0)",
+    "unique-names-generator (>=1.0.2,<2.0.0)"
+]
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.15.0"
+django-extensions = "^4.1"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Ruff Config
+
+[tool.ruff]
+line-length = 100
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+# E = pycodestyle errors, F = pyflakes, I = isort
+# N = pep8-naming, W = warnings, UP = pyupgrade
+

@@ -1,0 +1,13 @@
+<div id="expense-list" class="space-y-3">
+
+  {% include 'expenses/partials/expense_form.html' %}
+
+  {% for expense in expenses %}
+    {% include 'expenses/partials/expense_card.html' %}
+  {% empty %}
+    <p class="text-foreground/40 text-sm py-2">
+      No expenses yet. Add the first one above!
+    </p>
+  {% endfor %}
+
+</div>

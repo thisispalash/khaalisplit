@@ -1,0 +1,55 @@
+# khaaliSplit
+#
+# Profiles:
+#   dev  :: bind mount + dev server + host port 8002
+#   prod :: baked image, internal only (accessed through nginx)
+#
+# Usage:
+#   COMPOSE_PROFILES=dev docker compose up -d
+#   COMPOSE_PROFILES=prod docker compose up -d
+
+services:
+
+  # ---------------- dev ----------------------------------------------------- #
+  khaalisplit:
+    container_name: khaalisplit_dev
+    build: .
+    command: make dev
+    environment:
+      - DEBUG=true
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - khaalisplit_static:/app/static
+    ports:
+      - "8002:8000"
+    networks:
+      - kdio_network
+    profiles:
+      - dev
+
+  # ---------------- prod ---------------------------------------------------- #
+  khaalisplit_prod:
+    container_name: khaalisplit
+    build: .
+    command: make prod
+    restart: always
+    environment:
+      - DEBUG=false
+    env_file:
+      - .env
+    volumes:
+      - khaalisplit_static:/app/staticfiles
+    networks:
+      - kdio_network
+    profiles:
+      - prod
+
+networks:
+  kdio_network:
+    external: true
+
+volumes:
+  khaalisplit_static:
+    name: khaalisplit_static

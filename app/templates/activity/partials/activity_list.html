@@ -1,0 +1,34 @@
+{% for activity in activities %}
+  {% include 'activity/partials/activity_item.html' %}
+{% empty %}
+  <div class="text-center py-8">
+    <p class="text-foreground/40 text-sm">No activity yet.</p>
+    <p class="text-foreground/30 text-xs mt-1">
+      Start by adding friends or creating a group!
+    </p>
+    <div class="flex items-center justify-center gap-3 mt-4">
+      <a href="/friends/"
+        class="px-4 py-2 text-sm border border-foreground/20 rounded-md
+               hover:border-foreground/40 transition-colors">
+        Find Friends
+      </a>
+      <a href="/groups/create/"
+        class="px-4 py-2 text-sm bg-foreground text-background rounded-md
+               hover:bg-foreground/90 transition-colors">
+        Create Group
+      </a>
+    </div>
+  </div>
+{% endfor %}
+
+{% if has_more %}
+  {# Infinite scroll sentinel — triggers load when revealed #}
+  <div
+    hx-get="/api/activity/load-more/?page={{ next_page }}"
+    hx-trigger="revealed"
+    hx-swap="outerHTML"
+    class="flex items-center justify-center py-4"
+  >
+    {% include 'partials/loading.html' %}
+  </div>
+{% endif %}

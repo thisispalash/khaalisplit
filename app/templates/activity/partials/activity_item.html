@@ -1,0 +1,55 @@
+<div class="flex items-start gap-3 p-3 border-b border-foreground/5 last:border-b-0">
+
+  {# Action type icon #}
+  <div class="mt-0.5 text-foreground/30">
+    {% if activity.action_type == 'expense_added' or activity.action_type == 'expense_updated' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+      </svg>
+    {% elif activity.action_type == 'settlement_initiated' or activity.action_type == 'settlement_confirmed' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    {% elif activity.action_type == 'friend_request' or activity.action_type == 'friend_accepted' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+    {% elif activity.action_type == 'group_created' or activity.action_type == 'group_joined' or activity.action_type == 'group_invite' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
+      </svg>
+    {% elif activity.action_type == 'wallet_linked' or activity.action_type == 'pubkey_registered' %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+      </svg>
+    {% else %}
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    {% endif %}
+  </div>
+
+  {# Content #}
+  <div class="flex-1 min-w-0">
+    <p class="text-sm text-foreground/80">{{ activity.message }}</p>
+    <div class="flex items-center gap-3 mt-1 text-xs text-foreground/30">
+      <span>{{ activity.created_at|timesince }} ago</span>
+      {% if activity.group_id %}
+        <a href="/groups/{{ activity.group_id }}/"
+          class="hover:text-foreground/50 transition-colors">
+          Group #{{ activity.group_id }}
+        </a>
+      {% endif %}
+      {% if activity.settlement_hash %}
+        <span class="font-mono">{{ activity.settlement_hash|truncatechars:14 }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
