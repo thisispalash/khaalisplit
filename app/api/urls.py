@@ -3,6 +3,7 @@ from django.urls import path
 from api.views import auth as auth_views
 from api.views import ens_gateway
 from api.views import friends as friends_views
+from api.views import groups as groups_views
 
 app_name = 'api'
 
@@ -23,7 +24,14 @@ urlpatterns = [
   path('friends/remove/<str:address>/', friends_views.remove, name='friends-remove'),
   path('friends/pending/', friends_views.pending, name='friends-pending'),
 
-  # Groups (Step 8)
+  # Groups
+  path('groups/create/', groups_views.create, name='groups-create'),
+  path('groups/<int:group_id>/invite/', groups_views.invite, name='groups-invite'),
+  path('groups/<int:group_id>/accept/', groups_views.accept_invite, name='groups-accept'),
+  path('groups/<int:group_id>/leave/', groups_views.leave, name='groups-leave'),
+  path('groups/<int:group_id>/members/', groups_views.members, name='groups-members'),
+  path('groups/<int:group_id>/balances/', groups_views.balances, name='groups-balances'),
+
   # Expenses (Step 9)
   # Settlement (Step 10)
   # Activity (Step 11)

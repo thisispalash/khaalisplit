@@ -4,7 +4,38 @@
 
 {% block content %}
 <div class="max-w-md mx-auto mt-8 space-y-6">
+
   <h1 class="text-2xl font-bold">Create Group</h1>
-  <p class="text-foreground/40 text-sm">Group creation coming in Step 8.</p>
+  <p class="text-foreground/60 text-sm">
+    Start a new expense-sharing group. You'll be able to invite
+    friends after creating it.
+  </p>
+
+  <form method="post" action="/api/groups/create/" class="space-y-4">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+    <div class="text-red-400 text-sm border border-red-700/50 bg-red-900/20 px-3 py-2 rounded-md">
+      {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div>
+      <label class="block text-sm text-foreground/70 mb-1">Group Name</label>
+      {{ form.name }}
+      {% if form.name.errors %}
+        <p class="text-red-400 text-xs mt-1">{{ form.name.errors.0 }}</p>
+      {% endif %}
+    </div>
+
+    <button type="submit"
+      class="w-full py-2.5 bg-foreground text-background font-medium rounded-md
+             hover:bg-foreground/90 transition-colors cursor-pointer">
+      Create Group
+    </button>
+  </form>
+
 </div>
 {% endblock %}
