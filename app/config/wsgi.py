@@ -1,16 +1,12 @@
 """
-WSGI config for config project.
+WSGI config for khaaliSplit.
 
-It exposes the WSGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/6.0/howto/deployment/wsgi/
+Named export for Gunicorn: config.wsgi:khaaliSplit
 """
-
 import os
 
 from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-application = get_wsgi_application()
+khaaliSplit = get_wsgi_application()
