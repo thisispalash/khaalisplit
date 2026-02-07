@@ -29,12 +29,13 @@ ALLOWED_HOSTS = [
   'khaalisplit.localhost',  # remapped for nginx (dev)
   'localhost',
   '127.0.0.1',
-  'khaalisplit.kdio.xyz',   # production
+  'khaalisplit.xyz',        # production
+  'www.khaalisplit.xyz',    # production (www redirect)
 ]
 
 CSRF_TRUSTED_ORIGINS = [
   'https://khaalisplit.localhost',
-  'https://khaalisplit.kdio.xyz',
+  'https://khaalisplit.xyz',
 ]
 
 
