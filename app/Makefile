@@ -6,6 +6,8 @@ SHELL := /bin/bash
         docker-migrate docker-makemigrations docker-shell docker-db-setup
 .DEFAULT_GOAL := dev
 
+-include .env
+
 # ── dev ──────────────────────────────────────────────────────────
 # Runs Tailwind watch + Django dev server in parallel
 
@@ -58,5 +60,8 @@ docker-shell:
 	docker compose exec khaaliSplit make shell
 
 docker-db-setup:
-	docker compose run --rm khaaliSplit make makemigrations
-	docker compose run --rm khaaliSplit make migrate
+	@docker exec kdio_shared_db psql -U $(PG_USER) -d kdio_shared_db -tc \
+		"SELECT 1 FROM pg_database WHERE datname = '$(PG_DATABASE)'" | grep -q 1 \
+		|| docker exec kdio_shared_db psql -U $(PG_USER) -d kdio_shared_db -c "CREATE DATABASE \"$(PG_DATABASE)\";"
+	docker compose run --rm khaalisplit make makemigrations
+	docker compose run --rm khaalisplit make migrate
