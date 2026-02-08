@@ -1,3 +1,10 @@
+{# photons/step-indicator.html — Multi-step progress indicator
+   Params:
+     current : int (required) — 1-indexed current step
+     total   : int (default: 2) — total number of steps
+   Extracted from: auth/onboarding/profile.html + wallet.html progress bars
+#}
+
 {% with t=total|default:2 %}
 <div class="flex items-center justify-center gap-2 mb-8">
   {% for i in "123456789"|make_list %}

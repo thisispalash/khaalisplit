@@ -1,3 +1,10 @@
+{# quanta/spinner.html — Loading spinner with optional message
+   Params:
+     message : string (default: "Loading...")
+     size    : sm | md (default: md)
+   Replaces: partials/loading.html
+#}
+
 {% with s=size|default:"md" %}
 <div class="flex items-center justify-center py-4 gap-2 text-subtle">
   <svg class="animate-spin {% if s == 'sm' %}h-3 w-3{% else %}h-4 w-4{% endif %}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

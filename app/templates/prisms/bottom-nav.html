@@ -1,3 +1,9 @@
+{# prisms/bottom-nav.html — Mobile bottom navigation bar
+   Mobile only (md:hidden, fixed bottom-0). 4 tabs: Activity, Friends, Groups, Profile.
+   Composes: quanta/icon.html
+   Requires: active_tab in context (wired in Session 3)
+#}
+
 {% if user.is_authenticated %}
 <nav class="md:hidden fixed bottom-0 inset-x-0 bg-background border-t border-border z-40">
   <div class="flex items-center justify-around py-2">

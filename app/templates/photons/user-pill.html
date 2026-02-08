@@ -1,3 +1,11 @@
+{# photons/user-pill.html — User identity display
+   Context:
+     user : user object with .subname, .display_name, .avatar_url
+   Params:
+     link : "true" / "false" (default: "false") — wraps in <a> to profile
+     size : sm | md (default: md)
+#}
+
 {% with s=size|default:"md" %}
 
 {% if link == "true" %}

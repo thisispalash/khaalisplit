@@ -1,3 +1,11 @@
+{# partials/expense_list.html — HTMX partial for expense form + expense cards
+   Context:
+     expenses : queryset of CachedExpense objects
+     group    : group object (.group_id)
+     form     : AddExpenseForm (optional, included when loading full list)
+   Composes: partials/expense_form.html, lenses/expense-card.html
+#}
+
 <div id="expense-list" class="space-y-3">
 
   {% if form %}

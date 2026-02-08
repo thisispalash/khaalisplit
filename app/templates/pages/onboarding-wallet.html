@@ -13,6 +13,22 @@
     </p>
   </div>
 
+  {# Progress indicator — step 2 of 2 #}
+  {% include 'photons/step-indicator.html' with current=2 total=2 %}
+
+  {% if success %}
+  <div class="text-center space-y-4">
+    <div class="text-emphasis text-lg font-medium">Wallet linked!</div>
+    <p class="text-muted text-sm">
+      {{ linked_address.address|truncatechars:14 }} has been connected.
+    </p>
+    {% include 'quanta/button.html' with variant='primary' href='/' label='Start Splitting' %}
+  </div>
+  {% else %}
+
+  <div id="wallet-connect-area" class="space-y-4">
+
+    {# Connect wallet button #}
     <button
       id="onboarding-connect-btn"
       class="w-full py-3 border border-border rounded-md text-muted

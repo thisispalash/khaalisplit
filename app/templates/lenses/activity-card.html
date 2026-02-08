@@ -1,5 +1,30 @@
+{# lenses/activity-card.html — Single activity feed item
+   Context:
+     activity : activity object (.action_type, .message, .created_at, .group_id, .settlement_hash)
+   Replaces: activity/partials/activity_item.html
+   Composes: quanta/icon.html, quanta/address.html
+#}
+
 <div class="flex items-start gap-3 p-3 border-b border-border last:border-b-0">
 
+  {# Action type icon #}
+  <div class="mt-0.5 text-subtle">
+    {% if activity.action_type == 'expense_added' or activity.action_type == 'expense_updated' %}
+      {% include 'quanta/icon.html' with name='expense' size='sm' %}
+    {% elif activity.action_type == 'settlement_initiated' or activity.action_type == 'settlement_confirmed' %}
+      {% include 'quanta/icon.html' with name='settlement' size='sm' %}
+    {% elif activity.action_type == 'friend_request' or activity.action_type == 'friend_accepted' %}
+      {% include 'quanta/icon.html' with name='friend' size='sm' %}
+    {% elif activity.action_type == 'group_created' or activity.action_type == 'group_joined' or activity.action_type == 'group_invite' %}
+      {% include 'quanta/icon.html' with name='group' size='sm' %}
+    {% elif activity.action_type == 'wallet_linked' or activity.action_type == 'pubkey_registered' %}
+      {% include 'quanta/icon.html' with name='wallet' size='sm' %}
+    {% else %}
+      {% include 'quanta/icon.html' with name='info' size='sm' %}
+    {% endif %}
+  </div>
+
+  {# Content #}
   <div class="flex-1 min-w-0">
     <p class="text-sm text-foreground">{{ activity.message }}</p>
     <div class="flex items-center gap-3 mt-1 text-xs text-subtle">

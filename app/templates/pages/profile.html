@@ -5,6 +5,31 @@
 {% block content %}
 <div class="max-w-md mx-auto mt-8 space-y-6">
 
+  {# Profile header #}
+  <div class="text-center space-y-2">
+    {% if profile_user.avatar_url %}
+      <img src="{{ profile_user.avatar_url }}"
+        alt="{{ profile_user.subname }}"
+        class="w-16 h-16 rounded-full object-cover mx-auto"
+      >
+    {% endif %}
+    <h1 class="text-2xl font-bold">
+      {% if profile_user.display_name %}
+        {{ profile_user.display_name }}
+      {% else %}
+        {{ profile_user.subname }}
+      {% endif %}
+    </h1>
+    <p class="font-mono text-sm text-muted">{{ profile_user.subname }}</p>
+    {% if profile_user.addresses.first %}
+      <div class="text-xs">
+        {% include 'quanta/address.html' with address=profile_user.addresses.first.address %}
+      </div>
+    {% endif %}
+  </div>
+
+  {% if is_own_profile %}
+  {# Editable profile form — only shown for the authenticated user #}
   <form method="post" action="/api/auth/onboarding/profile/" class="space-y-4">
     {% csrf_token %}
 
@@ -15,6 +40,21 @@
     {% include 'quanta/button.html' with variant='primary' type='submit' label='Save Changes' full_width='true' %}
   </form>
 
+  {# Wallet section #}
+  <div class="space-y-3 pt-4 border-t border-border">
+    <h2 class="text-sm font-medium text-muted">Wallet</h2>
+    {% if profile_user.addresses.first %}
+      <div class="flex items-center justify-between p-3 border border-border rounded-md">
+        <span class="font-mono text-sm">{{ profile_user.addresses.first.address|truncatechars:18 }}</span>
+        {% include 'quanta/badge.html' with status='confirmed' label='Linked' %}
+      </div>
+    {% else %}
+      <p class="text-subtle text-sm">No wallet linked.</p>
+      {% include 'quanta/button.html' with variant='secondary' href='/onboarding/wallet/' label='Connect Wallet' %}
+    {% endif %}
+  </div>
+  {% else %}
+  {# Read-only public profile #}
   <div class="space-y-3">
     {% if profile_user.addresses.first %}
       <div class="p-3 border border-border rounded-md">
