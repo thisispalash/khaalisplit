@@ -252,22 +252,33 @@ def verify_signature(request):
   except Exception:
     pub_key = ''
 
-  # Check if address is burnt
-  if BurntAddress.objects.filter(address=address).exists():
+  # Normalize address to checksummed format for consistent DB storage
+  address = Web3.to_checksum_address(address)
+
+  # Check if address is burnt (case-insensitive)
+  if BurntAddress.objects.filter(address__iexact=address).exists():
     return HttpResponse('This address has been burnt and cannot be re-linked', status=403)
 
-  # Check if already linked to another user
-  existing = LinkedAddress.objects.filter(address=address).exclude(user=request.user).first()
+  # Check if already linked to another user (case-insensitive)
+  existing = LinkedAddress.objects.filter(address__iexact=address).exclude(user=request.user).first()
   if existing:
     return HttpResponse('Address already linked to another account', status=409)
 
   # Create or update the linked address
-  is_first_address = not request.user.addresses.filter(is_primary=True).exists()
+  # Check if this user already has ANY primary address (not just this one)
+  has_any_primary = request.user.addresses.filter(is_primary=True).exists()
+  # If updating an existing record that IS already primary, keep it primary
+  existing_own = request.user.addresses.filter(address__iexact=address).first()
+  if existing_own and existing_own.is_primary:
+    should_be_primary = True
+  else:
+    should_be_primary = not has_any_primary
+
   linked, created = LinkedAddress.objects.update_or_create(
     user=request.user,
     address=address,
     defaults={
-      'is_primary': is_first_address,
+      'is_primary': should_be_primary,
       'pub_key': pub_key,
     },
   )

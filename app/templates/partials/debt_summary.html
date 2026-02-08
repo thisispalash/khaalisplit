@@ -23,24 +23,28 @@
                      bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 text-xs"
               _="on click
                    if not window.walletConnected
-                     call window.showToast('Connect wallet first', 'error')
-                     halt
+                     call window.connectWallet()
+                     if not window.walletConnected
+                       halt
+                     end
                    end
                    set me.textContent to 'Signing...'
                    set me.disabled to true
                    try
-                     set result to await window.settleWithPermit(
-                       '{{ debt.to_address }}',
+                     set result to await window.initiateSettlement(
+                       '{{ debt.to_subname }}',
                        '{{ debt.amount }}',
-                       {{ group.group_id }}
+                       {{ group.group_id }},
+                       'authorization'
                      )
-                     if result and result.hash
-                       call window.showToast('Settlement submitted!', 'success')
+                     if result and result.tx_hash
                        set target to closest <div/> to me
-                       set target.innerHTML to '<p class=\"text-sm text-muted\">Tx: ' + result.hash.substring(0, 14) + '...</p>'
+                       set target.innerHTML to '<p class=\"text-sm text-emphasis\">Submitted! Tx: ' + result.tx_hash.substring(0, 14) + '...</p>'
+                     else
+                       set me.textContent to 'Pay'
+                       set me.disabled to false
                      end
                    catch e
-                     call window.showToast('Settlement failed: ' + e.message, 'error')
                      set me.textContent to 'Pay'
                      set me.disabled to false
                    end

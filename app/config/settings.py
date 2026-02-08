@@ -187,3 +187,7 @@ CIRCLE_API_KEY = os.getenv('CIRCLE_API_KEY', '')
 CIRCLE_GATEWAY_URL = os.getenv(
   'CIRCLE_GATEWAY_URL', 'https://gateway-api-testnet.circle.com'
 )
+
+# Hasura / Envio Indexer
+HASURA_GRAPHQL_URL = os.getenv('HASURA_GRAPHQL_URL', 'http://kdio_hasura:8080/v1/graphql')
+HASURA_ADMIN_SECRET = os.getenv('HASURA_ADMIN_SECRET', '')

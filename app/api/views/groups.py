@@ -1,5 +1,6 @@
 """
 Group views — HTMX partial responses for group management.
+On-chain operations use *For relay functions via send_tx().
 """
 import json
 import logging
@@ -12,8 +13,17 @@ from web3 import Web3
 
 from api.forms.groups import CreateGroupForm
 from api.models import Activity, CachedGroup, CachedGroupMember, User
+from api.utils.web3_utils import send_tx
 
 logger = logging.getLogger('wide_event')
+
+
+def _get_user_address(user):
+  """Get the user's primary checksummed address, or empty string."""
+  addr = user.addresses.filter(is_primary=True).first()
+  if not addr:
+    addr = user.addresses.first()
+  return Web3.to_checksum_address(addr.address) if addr else ''
 
 
 @login_required(login_url='/api/auth/login/')
@@ -26,12 +36,25 @@ def create(request):
 
   name = form.cleaned_data['name']
   name_hash = Web3.solidity_keccak(['string'], [name]).hex()
+  user_address = _get_user_address(request.user)
 
-  # For now, create locally. The on-chain createGroup will be called
-  # from the client via wallet.js, then the backend caches the result.
-  # Use a placeholder group_id (will be updated when on-chain tx confirms)
+  # Encrypted key from client (hex). For hackathon, use a placeholder if empty.
+  encrypted_key = request.POST.get('encrypted_key', '') or '0x00'
+  encrypted_key_bytes = bytes.fromhex(encrypted_key.replace('0x', '') if encrypted_key.startswith('0x') else encrypted_key) if encrypted_key else b'\x00'
+  name_hash_bytes = bytes.fromhex(name_hash.replace('0x', '') if name_hash.startswith('0x') else name_hash)
+
+  # On-chain: createGroupFor returns groupId
   import time
-  placeholder_id = int(time.time())  # temporary until on-chain
+  placeholder_id = int(time.time())  # fallback if on-chain fails
+  if user_address:
+    try:
+      tx_hash = send_tx(
+        'groups', 'createGroupFor',
+        user_address, name_hash_bytes, encrypted_key_bytes,
+      )
+      logger.info(f'createGroupFor tx={tx_hash}')
+    except Exception:
+      logger.exception('createGroupFor on-chain call failed')
 
   group = CachedGroup.objects.create(
     group_id=placeholder_id,
@@ -42,11 +65,10 @@ def create(request):
   )
 
   # Add creator as first member
-  primary_addr = request.user.addresses.filter(is_primary=True).first()
   CachedGroupMember.objects.create(
     group=group,
     user=request.user,
-    member_address=primary_addr.address if primary_addr else '',
+    member_address=user_address,
     status=CachedGroupMember.Status.ACCEPTED,
   )
 
@@ -88,13 +110,28 @@ def invite(request, group_id):
   if CachedGroupMember.objects.filter(group=group, user=invite_user).exists():
     return HttpResponse('User already in group', status=409)
 
-  primary_addr = invite_user.addresses.filter(is_primary=True).first()
+  inviter_address = _get_user_address(request.user)
+  member_address = _get_user_address(invite_user)
+  encrypted_key = request.POST.get('encrypted_key', '') or '0x00'
+  encrypted_key_bytes = bytes.fromhex(encrypted_key.replace('0x', '') if encrypted_key.startswith('0x') else encrypted_key) if encrypted_key else b'\x00'
+
   CachedGroupMember.objects.create(
     group=group,
     user=invite_user,
-    member_address=primary_addr.address if primary_addr else '',
+    member_address=member_address,
     status=CachedGroupMember.Status.INVITED,
   )
+
+  # On-chain: inviteMemberFor (non-blocking)
+  if inviter_address and member_address:
+    try:
+      tx_hash = send_tx(
+        'groups', 'inviteMemberFor',
+        inviter_address, group.group_id, member_address, encrypted_key_bytes,
+      )
+      logger.info(f'inviteMemberFor tx={tx_hash}')
+    except Exception:
+      logger.exception('inviteMemberFor on-chain call failed')
 
   Activity.objects.create(
     user=request.user,
@@ -133,6 +170,15 @@ def accept_invite(request, group_id):
   ).count()
   group.save()
 
+  # On-chain: acceptGroupInviteFor (non-blocking)
+  user_address = _get_user_address(request.user)
+  if user_address:
+    try:
+      tx_hash = send_tx('groups', 'acceptGroupInviteFor', user_address, group.group_id)
+      logger.info(f'acceptGroupInviteFor tx={tx_hash}')
+    except Exception:
+      logger.exception('acceptGroupInviteFor on-chain call failed')
+
   Activity.objects.create(
     user=request.user,
     action_type=Activity.ActionType.GROUP_JOINED,
@@ -164,6 +210,15 @@ def leave(request, group_id):
     status=CachedGroupMember.Status.ACCEPTED
   ).count()
   group.save()
+
+  # On-chain: leaveGroupFor (non-blocking)
+  user_address = _get_user_address(request.user)
+  if user_address:
+    try:
+      tx_hash = send_tx('groups', 'leaveGroupFor', user_address, group.group_id)
+      logger.info(f'leaveGroupFor tx={tx_hash}')
+    except Exception:
+      logger.exception('leaveGroupFor on-chain call failed')
 
   Activity.objects.create(
     user=request.user,

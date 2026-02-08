@@ -124,6 +124,40 @@ FRIENDS_ABI = [
     'stateMutability': 'view',
     'type': 'function',
   },
+  # ── Relay (backend-only) ──
+  # requestFriendFor(address user, address friend)
+  {
+    'inputs': [
+      {'name': 'user', 'type': 'address'},
+      {'name': 'friend', 'type': 'address'},
+    ],
+    'name': 'requestFriendFor',
+    'outputs': [],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
+  # acceptFriendFor(address user, address requester)
+  {
+    'inputs': [
+      {'name': 'user', 'type': 'address'},
+      {'name': 'requester', 'type': 'address'},
+    ],
+    'name': 'acceptFriendFor',
+    'outputs': [],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
+  # removeFriendFor(address user, address friend)
+  {
+    'inputs': [
+      {'name': 'user', 'type': 'address'},
+      {'name': 'friend', 'type': 'address'},
+    ],
+    'name': 'removeFriendFor',
+    'outputs': [],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
 ]
 
 GROUPS_ABI = [
@@ -174,6 +208,54 @@ GROUPS_ABI = [
     'stateMutability': 'view',
     'type': 'function',
   },
+  # ── Relay (backend-only) ──
+  # createGroupFor(address user, bytes32 nameHash, bytes encryptedKey) → uint256
+  {
+    'inputs': [
+      {'name': 'user', 'type': 'address'},
+      {'name': 'nameHash', 'type': 'bytes32'},
+      {'name': 'encryptedKey', 'type': 'bytes'},
+    ],
+    'name': 'createGroupFor',
+    'outputs': [{'name': 'groupId', 'type': 'uint256'}],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
+  # inviteMemberFor(address inviter, uint256 groupId, address member, bytes encryptedKey)
+  {
+    'inputs': [
+      {'name': 'inviter', 'type': 'address'},
+      {'name': 'groupId', 'type': 'uint256'},
+      {'name': 'member', 'type': 'address'},
+      {'name': 'encryptedKey', 'type': 'bytes'},
+    ],
+    'name': 'inviteMemberFor',
+    'outputs': [],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
+  # acceptGroupInviteFor(address user, uint256 groupId)
+  {
+    'inputs': [
+      {'name': 'user', 'type': 'address'},
+      {'name': 'groupId', 'type': 'uint256'},
+    ],
+    'name': 'acceptGroupInviteFor',
+    'outputs': [],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
+  # leaveGroupFor(address user, uint256 groupId)
+  {
+    'inputs': [
+      {'name': 'user', 'type': 'address'},
+      {'name': 'groupId', 'type': 'uint256'},
+    ],
+    'name': 'leaveGroupFor',
+    'outputs': [],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
 ]
 
 EXPENSES_ABI = [
@@ -197,6 +279,33 @@ EXPENSES_ABI = [
       {'name': 'newEncryptedData', 'type': 'bytes'},
     ],
     'name': 'updateExpense',
+    'outputs': [],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
+  # ── Relay (backend-only) ──
+  # addExpenseFor(address creator, uint256 groupId, bytes32 dataHash, bytes encryptedData) → uint256
+  {
+    'inputs': [
+      {'name': 'creator', 'type': 'address'},
+      {'name': 'groupId', 'type': 'uint256'},
+      {'name': 'dataHash', 'type': 'bytes32'},
+      {'name': 'encryptedData', 'type': 'bytes'},
+    ],
+    'name': 'addExpenseFor',
+    'outputs': [{'name': 'expenseId', 'type': 'uint256'}],
+    'stateMutability': 'nonpayable',
+    'type': 'function',
+  },
+  # updateExpenseFor(address creator, uint256 expenseId, bytes32 newDataHash, bytes newEncryptedData)
+  {
+    'inputs': [
+      {'name': 'creator', 'type': 'address'},
+      {'name': 'expenseId', 'type': 'uint256'},
+      {'name': 'newDataHash', 'type': 'bytes32'},
+      {'name': 'newEncryptedData', 'type': 'bytes'},
+    ],
+    'name': 'updateExpenseFor',
     'outputs': [],
     'stateMutability': 'nonpayable',
     'type': 'function',

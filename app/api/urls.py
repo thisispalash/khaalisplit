@@ -47,6 +47,7 @@ urlpatterns = [
   # Settlement
   path('settle/<int:group_id>/debts/', settlement_views.debts, name='settle-debts'),
   path('settle/<int:group_id>/initiate/', settlement_views.initiate, name='settle-initiate'),
+  path('settle/for-user/', settlement_views.settle_for_user, name='settle-for-user'),
   path('settle/status/<str:tx_hash>/', settlement_views.status, name='settle-status'),
 
   # Activity

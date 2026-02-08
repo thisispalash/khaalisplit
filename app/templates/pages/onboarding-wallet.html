@@ -26,6 +26,23 @@
   </div>
   {% else %}
 
+  {# Mobile-specific messaging #}
+  <div id="mobile-msg" class="hidden p-4 border border-border rounded-md text-center space-y-3"
+    _="on load if window.isMobile() remove .hidden from me end">
+    <p class="text-sm text-muted">
+      On mobile? Open this page in your
+      <strong class="text-foreground">MetaMask browser</strong>
+      for the best experience.
+    </p>
+    <button
+      class="w-full py-2.5 bg-foreground text-background font-medium rounded-md
+             hover:bg-foreground/90 transition-colors cursor-pointer"
+      _="on click call window.openMetaMaskDeepLink() end"
+    >
+      Open in MetaMask
+    </button>
+  </div>
+
   <div id="wallet-connect-area" class="space-y-4">
 
     {# Connect wallet button #}

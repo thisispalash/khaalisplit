@@ -125,11 +125,28 @@ def _resolve_addr(user):
 
 
 def _resolve_text(user, call_args: bytes):
-  """Resolve text(bytes32,string) → text record value."""
+  """Resolve text(bytes32,string) → text record value.
+
+  Tries Hasura/indexer first for on-chain text records (payment prefs),
+  then falls back to local DB fields.
+  """
   try:
     _node, key = decode_text_call(call_args)
   except Exception:
     return None
+
+  # Try Hasura for on-chain text records first
+  if key.startswith('com.khaalisplit.payment.'):
+    try:
+      from api.utils.ens_codec import subname_node
+      from api.utils.hasura_client import get_subname_records
+      node = subname_node(user.subname)
+      node_hex = '0x' + node.hex() if isinstance(node, bytes) else node
+      records = get_subname_records(node_hex)
+      if key in records.get('text', {}):
+        return encode_text_response(records['text'][key])
+    except Exception:
+      pass  # Fall through to local DB
 
   text_records = {
     'display': user.display_name or user.subname,
