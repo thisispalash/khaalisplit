@@ -1,9 +1,11 @@
 """
 ENS codec utilities for CCIP-Read gateway.
 
-Handles DNS name parsing and ABI encode/decode for EIP-3668 responses.
+Handles DNS name parsing, ABI encode/decode for EIP-3668 responses,
+and ENS namehash computation.
 """
 from eth_abi import decode, encode
+from web3 import Web3
 
 
 def dns_decode(dns_name: bytes) -> str:
@@ -85,3 +87,63 @@ def encode_gateway_response(result: bytes, expires: int, signature: bytes) -> by
   Format: (bytes result, uint64 expires, bytes signature)
   """
   return encode(['bytes', 'uint64', 'bytes'], [result, expires, signature])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ENS Namehash
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Pre-computed: namehash("eth")
+_ETH_NODE = bytes.fromhex(
+  '93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae'
+)
+
+# Pre-computed: namehash("khaalisplit.eth")
+#   = keccak256(abi.encodePacked(namehash("eth"), keccak256("khaalisplit")))
+PARENT_NODE = Web3.solidity_keccak(
+  ['bytes32', 'bytes32'],
+  [_ETH_NODE, Web3.keccak(text='khaalisplit')],
+)
+
+
+def ens_namehash(name: str) -> bytes:
+  """
+  Compute the ENS namehash for a dotted name.
+
+  namehash("") = 0x0000...0000
+  namehash("eth") = keccak256(namehash("") + keccak256("eth"))
+  namehash("khaalisplit.eth") = keccak256(namehash("eth") + keccak256("khaalisplit"))
+
+  Args:
+    name: Dotted ENS name (e.g., "cool-tiger.khaalisplit.eth")
+
+  Returns:
+    32-byte namehash
+  """
+  node = b'\x00' * 32
+  if not name:
+    return node
+  labels = name.split('.')
+  for label in reversed(labels):
+    label_hash = Web3.keccak(text=label)
+    node = Web3.keccak(node + label_hash)
+  return node
+
+
+def subname_node(label: str) -> bytes:
+  """
+  Compute the namehash for a khaaliSplit subname.
+
+  Equivalent to the on-chain `subnameNode(label)` function:
+    keccak256(abi.encodePacked(parentNode, keccak256(bytes(label))))
+
+  Args:
+    label: The subname label (e.g., "cool-tiger")
+
+  Returns:
+    32-byte namehash for `label.khaalisplit.eth`
+  """
+  return Web3.solidity_keccak(
+    ['bytes32', 'bytes32'],
+    [PARENT_NODE, Web3.keccak(text=label)],
+  )
