@@ -401,3 +401,38 @@ No new events are added. The relay functions emit the **same events** as the ori
 | New `backend` storage slot collides with existing storage | Both Groups and Expenses use `Initializable` + `OwnableUpgradeable`. New storage variables are appended at the end — no collision. Verify with `forge inspect` storage layout. |
 | Backend wallet compromise allows arbitrary friend/group/expense manipulation | Same risk as existing `registerPubKey` relay. Backend is a trusted relayer. Acceptable for hackathon. |
 | Gas costs increase due to added functions | Negligible — functions are small. No new storage slots read/written beyond what originals already access. |
+
+---
+
+## Implementation Notes
+
+_Added during Session 1 implementation._
+
+### Existing errors — no new definitions needed
+- `khaaliSplitExpenses` already had `NotGroupMember(uint256, address)` and `NotExpenseCreator(uint256, address)` — reused directly.
+- `khaaliSplitGroups` already had all referenced errors (`NotRegistered`, `NotGroupMember`, `NotFriends`, `AlreadyMember`, `AlreadyInvited`, `NotInvited`, `GroupDoesNotExist`, `CreatorCannotLeave`).
+- `khaaliSplitFriends` already had `NotBackend`, `NotRegistered`, `CannotFriendSelf`, `AlreadyFriends`, `AlreadyRequested`, `NoPendingRequest`, `NotFriends`.
+- Only `NotBackend()` was added to Groups and Expenses (they didn't have it before).
+
+### Storage layout — safe for UUPS
+- **Groups**: `backend` appended after `encryptedGroupKey` (the last existing mapping). Goes into the next available storage slot after all existing contract-declared variables. No collision with OZ upgradeable base contract storage (those use namespaced storage at fixed slots).
+- **Expenses**: `backend` appended after `_groupExpenses`. Same safe pattern.
+- Friends already had `backend` from the initial implementation — no change.
+
+### `updateExpenseFor` — matched original validation
+The plan's `updateExpenseFor` only checked `exp.creator != creator`. The original `updateExpense` also checks `groupRegistry.isMember(e.groupId, msg.sender)`. The relay version was updated to match — it checks both `NotExpenseCreator` AND `NotGroupMember`, consistent with the original.
+
+### `IkhaaliSplitExpenses.sol` — created
+Did not exist before. Created as a complete interface covering all public functions including relay functions, `setBackend`, and `backend`.
+
+### Interfaces — made complete
+Per discussion, all three interfaces (`IkhaaliSplitFriends`, `IkhaaliSplitGroups`, `IkhaaliSplitExpenses`) were updated to be comprehensive — including relay functions, admin functions, and all views — not just the minimal cross-contract call surface.
+
+### Test counts
+- **Friends**: 27 existing + 17 relay tests = 44 total
+- **Groups**: 22 existing + 23 relay tests (including setBackend) = 45 total
+- **Expenses**: 15 existing + 12 relay tests (including setBackend) = 27 total
+- **Full suite**: 331 tests, 0 failures
+
+### Deployment — NOT done
+Upgrade script (`script/UpgradeCore.s.sol`) is ready but deployment to Sepolia will be done manually. The `deployments.json` implementation addresses will be updated after deployment.
