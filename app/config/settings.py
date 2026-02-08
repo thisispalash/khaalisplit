@@ -162,13 +162,28 @@ LOGGING = {
 
 # ---------------- Web3 / Contract Config ---------------------------------- #
 
+# RPC URLs (one per supported chain)
 SEPOLIA_RPC_URL = os.getenv('SEPOLIA_RPC_URL', '')
+BASE_SEPOLIA_RPC_URL = os.getenv('BASE_SEPOLIA_RPC_URL', '')
+ARBITRUM_SEPOLIA_RPC_URL = os.getenv('ARBITRUM_SEPOLIA_RPC_URL', '')
+OPTIMISM_SEPOLIA_RPC_URL = os.getenv('OPTIMISM_SEPOLIA_RPC_URL', '')
+ARC_TESTNET_RPC_URL = os.getenv('ARC_TESTNET_RPC_URL', '')
+
+# Backend wallet
 BACKEND_PRIVATE_KEY = os.getenv('BACKEND_PRIVATE_KEY', '')
 GATEWAY_SIGNER_KEY = os.getenv('GATEWAY_SIGNER_KEY', '')
 
-# Contract addresses (Sepolia)
+# Contract addresses (Sepolia — proxies)
 CONTRACT_FRIENDS = os.getenv('CONTRACT_FRIENDS', '')
 CONTRACT_GROUPS = os.getenv('CONTRACT_GROUPS', '')
 CONTRACT_EXPENSES = os.getenv('CONTRACT_EXPENSES', '')
 CONTRACT_SETTLEMENT = os.getenv('CONTRACT_SETTLEMENT', '')
 CONTRACT_RESOLVER = os.getenv('CONTRACT_RESOLVER', '')
+CONTRACT_SUBNAMES = os.getenv('CONTRACT_SUBNAMES', '')
+CONTRACT_REPUTATION = os.getenv('CONTRACT_REPUTATION', '')
+
+# Circle Gateway API
+CIRCLE_API_KEY = os.getenv('CIRCLE_API_KEY', '')
+CIRCLE_GATEWAY_URL = os.getenv(
+  'CIRCLE_GATEWAY_URL', 'https://gateway-api-testnet.circle.com'
+)
