@@ -19,7 +19,7 @@
       {% include 'quanta/badge.html' with status='accepted' label='Friends' %}
       <button
         class="text-xs text-subtle hover:text-foreground transition-colors cursor-pointer"
-        hx-post="/api/friends/remove/{{ friend_user.addresses.first.address }}/"
+        hx-post="/api/friends/remove/{{ friend_user.subname }}/"
         hx-target="#friend-{{ friend_user.subname }}"
         hx-swap="outerHTML"
         hx-confirm="Remove {{ friend_user.subname }} as a friend?"

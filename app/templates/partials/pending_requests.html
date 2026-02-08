@@ -10,7 +10,7 @@
   <h3 class="text-sm font-medium text-muted">Pending Requests</h3>
   {% for req in pending %}
   <div class="flex items-center justify-between p-3 border border-border rounded-md"
-    id="pending-{{ req.friend_address }}">
+    id="pending-{{ req.friend_user.subname }}">
     <div>
       {% if req.friend_user %}
         <span class="font-mono text-sm">{{ req.friend_user.subname }}</span>
@@ -24,8 +24,8 @@
       <button
         class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
                bg-foreground text-background hover:bg-foreground/90 px-3 py-1 text-xs"
-        hx-post="/api/friends/accept/{{ req.friend_address }}/"
-        hx-target="#pending-{{ req.friend_address }}"
+        hx-post="/api/friends/accept/{{ req.friend_user.subname }}/"
+        hx-target="#pending-{{ req.friend_user.subname }}"
         hx-swap="outerHTML"
       >
         Accept
@@ -33,8 +33,8 @@
       <button
         class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
                border border-border text-muted hover:text-foreground hover:border-border-hover px-3 py-1 text-xs"
-        hx-post="/api/friends/remove/{{ req.friend_address }}/"
-        hx-target="#pending-{{ req.friend_address }}"
+        hx-post="/api/friends/remove/{{ req.friend_user.subname }}/"
+        hx-target="#pending-{{ req.friend_user.subname }}"
         hx-swap="outerHTML"
       >
         Decline
