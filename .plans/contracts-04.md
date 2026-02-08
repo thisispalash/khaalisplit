@@ -363,9 +363,39 @@ The client can differentiate with a `type` field in the NFC/Bluetooth payload:
 
 **Test results:** 250 passing, 0 failed, 1 skipped (old integration test). All 52 settlement tests updated and green.
 
-### Change 1: `settleFromGateway` — NOT YET STARTED
+### Change 1: `settleFromGateway` — COMPLETED
 
-Deferred to next session. The plan above describes the full design.
+**Commits:**
+- `1f20d60` — feat(interfaces): add IGatewayMinter and settleFromGateway to settlement interface
+- `c834bc5` — feat(settlement): add settleFromGateway and MockGatewayMinter
+- `0397378` — test(settlement): add settleFromGateway and setGatewayMinter tests
+- `50e2a26` — feat(deploy): add gatewayMinter to cctp.json and deploy script
+
+**What was done:**
+- Created `src/interfaces/IGatewayMinter.sol` — minimal interface with `gatewayMint(bytes, bytes)`
+- Updated `IkhaaliSplitSettlement.sol` — added `settleFromGateway` function signature, `setGatewayMinter` admin setter, `GatewayMinterUpdated` event
+- Added `IGatewayMinter public gatewayMinter` storage to settlement contract
+- Added `setGatewayMinter(address)` admin setter with `GatewayMinterUpdated` event
+- Added `GatewayMinterNotSet` error
+- Implemented `settleFromGateway(attestationPayload, attestationSignature, recipientNode, sender, memo)` using Option B (sender passed explicitly)
+  - Validates recipientNode, subnameRegistry, gatewayMinter up front
+  - Resolves token from ENS text records, records balance before mint
+  - Calls `gatewayMinter.gatewayMint()` — USDC minted to settlement contract
+  - Computes minted amount via `balanceAfter - balanceBefore` (handles Gateway fees)
+  - Resolves recipient address from ENS node
+  - Routes via `_routeSettlement()` (same Gateway/CCTP logic as settleWithAuthorization)
+  - Updates sender reputation, emits SettlementCompleted
+- Created `test/helpers/MockGatewayMinter.sol` — mints configurable MockUSDC to msg.sender, with `shouldRevert` and `shouldMintZero` toggles
+- Added 15 new `settleFromGateway` tests + 3 `setGatewayMinter` admin tests (18 total new tests)
+- Updated `test_initialize_state` to verify `gatewayMinter` field
+- Added `gatewayMinter` addresses to `script/cctp.json` (0x0022222ABE238Cc2C7Bb1f21003F0a260052475B, same on testnet/mainnet)
+- Updated `script/DeploySettlement.s.sol` to read and configure `gatewayMinter` from cctp.json
+
+**Deviations from plan:**
+- Used Option B (sender passed explicitly) as recommended — no attestation byte parsing
+- Did not extract a modifier for the `recipientNode == bytes32(0)` / `subnameRegistryNotSet` checks — kept inline for consistency with existing `settleWithAuthorization` style
+
+**Test results:** 268 passing, 0 failed, 1 skipped (old integration test). 70 settlement tests (52 existing + 18 new).
 
 ---
 
