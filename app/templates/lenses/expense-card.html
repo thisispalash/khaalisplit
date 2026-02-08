@@ -1,0 +1,55 @@
+{# lenses/expense-card.html — Single expense item
+   Context:
+     expense : expense object (.expense_id, .description, .category, .creator.subname,
+               .split_type, .created_at, .amount, .encrypted_data)
+   Replaces: expenses/partials/expense_card.html
+   Composes: quanta/badge.html, quanta/amount.html
+   Preserves: Hyperscript decryption for encrypted expenses
+#}
+
+<div class="flex items-center justify-between p-3 border border-border rounded-md"
+  id="expense-{{ expense.expense_id }}">
+  <div class="flex-1 min-w-0">
+    <div class="flex items-center gap-2">
+      <span class="text-sm font-medium truncate">
+        {{ expense.description|default:"Encrypted expense" }}
+      </span>
+      {% if expense.category %}
+        {% include 'quanta/badge.html' with status='default' label=expense.category %}
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-3 mt-1 text-xs text-subtle">
+      <span>by {{ expense.creator.subname }}</span>
+      <span>{{ expense.split_type }}</span>
+      <span>{{ expense.created_at|timesince }} ago</span>
+    </div>
+  </div>
+  <div class="text-right ml-3">
+    {% if expense.amount %}
+      {% include 'quanta/amount.html' with value=expense.amount %}
+    {% else %}
+      <span class="text-xs text-dim italic"
+        _="on load
+             if window.khaaliCrypto and window.khaaliCrypto.groupKey
+               set decrypted to await window.khaaliCrypto.decrypt('{{ expense.encrypted_data|escapejs }}')
+               if decrypted
+                 set data to JSON.parse(decrypted)
+                 set my textContent to data.amount
+                 htmx.ajax('POST', '/api/expenses/{{ expense.expense_id }}/update/', {
+                   values: {
+                     amount: data.amount,
+                     description: data.description,
+                     category: data.category or '',
+                     split_type: data.split_type or 'equal',
+                     csrfmiddlewaretoken: document.querySelector('[name=csrfmiddlewaretoken]').value
+                   }
+                 })
+               end
+             end
+           end"
+      >
+        encrypted
+      </span>
+    {% endif %}
+  </div>
+</div>

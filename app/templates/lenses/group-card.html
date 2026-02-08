@@ -1,0 +1,16 @@
+{# lenses/group-card.html — Group list item
+   Context:
+     group : group object (.group_id, .name, .member_count, .creator.subname)
+   Replaces: groups/partials/group_card.html
+#}
+
+<div class="p-4 border border-border rounded-md hover:border-border-hover transition-colors"
+  id="group-{{ group.group_id }}">
+  <a href="/groups/{{ group.group_id }}/" class="block">
+    <h3 class="font-medium">{{ group.name|default:"Unnamed Group" }}</h3>
+    <div class="flex items-center gap-4 mt-1 text-xs text-subtle">
+      <span>{{ group.member_count }} member{{ group.member_count|pluralize }}</span>
+      <span>Created by {{ group.creator.subname }}</span>
+    </div>
+  </a>
+</div>
