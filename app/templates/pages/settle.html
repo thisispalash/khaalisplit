@@ -16,15 +16,6 @@
     </p>
   </div>
 
-  {# Debt summary — loaded via HTMX #}
-  <div id="debt-summary"
-    hx-get="/api/settle/{{ group.group_id }}/debts/"
-    hx-trigger="load"
-    hx-swap="innerHTML">
-    {% include 'quanta/spinner.html' %}
-  </div>
-
-  {# Active settlements #}
   <div class="space-y-3">
     <h2 class="text-sm font-medium text-muted">Recent Settlements</h2>
     <div id="settlement-list" class="space-y-2">

@@ -1,18 +1,6 @@
-{# prisms/nav-header.html — Desktop navigation header
-   Desktop only (hidden md:block). Logo + nav links + wallet button + logout.
-   Composes: photons/wallet-button.html
-   Replaces: components/header.html
-#}
-
 <header class="hidden md:block border-b border-border">
   <nav class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
 
-    {# Logo / Home link #}
-    <a href="/" class="text-xl font-bold text-foreground hover:text-muted transition-colors">
-      khaali<span class="text-muted">Split</span>
-    </a>
-
-    {# Navigation links (shown when logged in) #}
     {% if user.is_authenticated %}
     <div class="flex items-center gap-6 text-sm">
       <a href="/friends/"

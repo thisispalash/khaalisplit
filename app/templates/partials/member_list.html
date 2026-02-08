@@ -1,10 +1,3 @@
-{# partials/member_list.html — HTMX partial for group member list
-   Context:
-     members : queryset of CachedGroupMember objects (.user, .member_address, .status)
-     group   : group object
-   Composes: photons/user-pill.html, quanta/badge.html, quanta/address.html
-#}
-
 <div class="space-y-2" id="member-list">
   {% for member in members %}
   <div class="flex items-center justify-between p-2 border border-border rounded-md">

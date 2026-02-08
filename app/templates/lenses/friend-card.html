@@ -1,11 +1,3 @@
-{# lenses/friend-card.html — Friend list item with status and actions
-   Context:
-     friend_user : user object (.subname, .display_name, .addresses.first.address)
-     status      : 'pending_sent' | 'accepted'
-   Replaces: friends/partials/friend_card.html
-   Composes: photons/user-pill.html, quanta/badge.html
-#}
-
 <div class="flex items-center justify-between p-3 border border-border rounded-md"
   id="friend-{{ friend_user.subname }}">
   <div>

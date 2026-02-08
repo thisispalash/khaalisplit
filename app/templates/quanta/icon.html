@@ -1,19 +1,3 @@
-{# quanta/icon.html — Icon wrapper that includes SVG from quanta/icons/
-   Params:
-     name : string (required) — maps to quanta/icons/<name>.svg
-     size : sm | md | lg (default: md)
-
-   Usage:
-     {% include 'quanta/icon.html' with name='expense' size='md' %}
-
-   SVG files in quanta/icons/ should:
-     - Use currentColor for fill/stroke so color is inherited
-     - Have no fixed width/height (the wrapper controls sizing)
-     - Use viewBox for scaling (e.g. viewBox="0 0 24 24")
-
-   To add a new icon, drop an SVG file into quanta/icons/<name>.svg
-#}
-
 {% with s=size|default:"md" %}
 <span class="inline-flex items-center justify-center shrink-0 text-current {% if s == 'sm' %}w-4 h-4{% elif s == 'lg' %}w-6 h-6{% else %}w-5 h-5{% endif %}"
   aria-hidden="true"

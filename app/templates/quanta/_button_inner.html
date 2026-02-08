@@ -1,7 +1,3 @@
-{# quanta/_button_inner.html — internal partial, not used directly.
-   Receives: v (variant), size_cls, label, type, full_width, href, extra_classes, extra_attrs
-#}
-
 {% if v == "secondary" %}
   {% with variant_cls="border border-border text-muted hover:text-foreground hover:border-border-hover" %}{% include "quanta/_button_render.html" %}{% endwith %}
 {% elif v == "danger" %}

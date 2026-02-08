@@ -9,17 +9,6 @@
     <meta name="author" content="@theprimefibber">
     <meta name="robots" content="index, follow">
 
-    {# PWA meta (merged from base_mobile.html) #}
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#1a1a1a">
-    <link rel="manifest" href="{% static 'm/manifest.json' %}">
-
-    <title>
-      {% block title %}khaaliSplit{% endblock %}
-    </title>
-
-    {# Google Fonts CDN fallback #}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Syne+Mono&display=swap" rel="stylesheet">
@@ -43,10 +32,6 @@
     "
   >
 
-    {# Desktop navigation #}
-    {% include 'prisms/nav-header.html' %}
-
-    {# Toast container for OOB swaps #}
     <div id="toast-container"
       class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
     ></div>
@@ -56,10 +41,6 @@
       {% endblock %}
     </main>
 
-    {# Desktop footer #}
-    {% include 'prisms/footer.html' %}
-
-    {# Mobile bottom navigation #}
     {% include 'prisms/bottom-nav.html' %}
 
   </body>

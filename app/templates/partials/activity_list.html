@@ -1,11 +1,3 @@
-{# partials/activity_list.html — HTMX partial for paginated activity feed
-   Context:
-     activities : list of activity objects
-     has_more   : bool
-     next_page  : int
-   Composes: lenses/activity-card.html, quanta/spinner.html
-#}
-
 {% for activity in activities %}
   {% include 'lenses/activity-card.html' %}
 {% empty %}
