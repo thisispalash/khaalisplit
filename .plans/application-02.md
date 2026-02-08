@@ -318,6 +318,14 @@ Create `app/templates/lenses/` — 6 files.
 
 All cards: `border border-border rounded-md` base. No colored borders.
 
+### Implementation Notes (2.1)
+
+1. **`quanta/button.html` not used for HTMX-interactive buttons.** Django's `|add:` filter can't reliably build multi-part `hx-*` attribute strings for `extra_attrs`. Buttons with HTMX attributes (`hx-post`, `hx-target`, `hx-swap`, `hx-confirm`) are written as inline `<button>` elements using the same design token classes as the button component. This follows locality of behavior — the HTMX attributes stay visible alongside the element they control.
+
+2. **`settlement-card.html` uses inline `truncatechars:18`** for the tx hash display instead of `quanta/address.html` (which truncates to 14). The old template showed 18 chars for tx hashes, and `address.html` was designed for Ethereum addresses.
+
+3. **`expense-card.html` uses `quanta/badge.html` with `status='default'`** for the category display (replacing the old `bg-foreground/5` inline badge).
+
 ## 2.2 Create Prisms (Sections)
 
 Create `app/templates/prisms/` — 8 files.
@@ -337,8 +345,8 @@ Desktop only (`hidden md:block`). Tagline + GitHub.
 Replaces: `components/footer.html`
 
 ### `prisms/activity-feed.html`
-HTMX load wrapper with skeleton fallback.
-**Composes:** `quanta/skeleton.html`
+HTMX load wrapper with spinner fallback.
+**Composes:** `quanta/spinner.html` (skeleton was skipped in Session 1)
 
 ### `prisms/friend-list.html`
 Search + pending + friends.
@@ -349,12 +357,20 @@ Invite form + HTMX member list.
 **Composes:** `photons/user-pill.html`, `quanta/badge.html`
 
 ### `prisms/group-expenses.html`
-Expense form + expense list.
-**Composes:** `photons/form-field.html`, `lenses/expense-card.html`
+HTMX-loaded expense list (the expense form + encryption Hyperscript lives in the API partial, loaded inline).
+**Composes:** `quanta/spinner.html`
 
 ### `prisms/balance-summary.html`
-HTMX-loaded balance/debt section.
-**Composes:** `photons/debt-arrow.html`
+HTMX-loaded balance/debt section. The pay button Hyperscript (`settleWithPermit`) and amount display live in the API-returned debt summary partial, not in this prism.
+**Composes:** `quanta/spinner.html`
+
+### Implementation Notes (2.2)
+
+1. **Prisms that wrap HTMX-loaded content are thin.** `activity-feed.html`, `group-expenses.html`, and `balance-summary.html` are mostly HTMX load containers + spinner. The actual content (expense form, debt cards, activity items) is returned by the API and lives in the old partials — those partials get updated to use lenses/photons in Session 3.
+
+2. **`group-members.html` has the invite form inline** (not extracted to a separate component) since it's tightly coupled to the `#member-list` HTMX target. Locality of behavior.
+
+3. **`bottom-nav.html` only renders for authenticated users** (`{% if user.is_authenticated %}`). `active_tab` context variable will be wired via context processor in Session 3.
 
 ## 2.3 Rewrite Unified Base Template
 
@@ -387,14 +403,28 @@ Create `app/templates/pages/` — 12 files. Each extends `base.html` and compose
 | `pages/group-detail.html` | `groups/detail.html` | `prisms/group-members.html`, `prisms/balance-summary.html`, `prisms/group-expenses.html` |
 | `pages/group-create.html` | `groups/create.html` | `photons/form-field.html`, `quanta/button.html` |
 | `pages/settle.html` | `settlement/settle.html` | `photons/debt-arrow.html`, `lenses/settlement-card.html` |
-| `pages/profile.html` | profile own view | `photons/form-field.html` |
-| `pages/profile-public.html` | profile public view | `photons/user-pill.html` |
+| `pages/profile.html` | profile own + public view | `photons/form-field.html`, `quanta/address.html`, `quanta/badge.html` |
 
 ## 2.5 Verification (Session 2)
 
 1. `make tailwind` — builds without errors (new template classes get picked up)
 2. Visually inspect each page template file — verify no raw colors (`text-red-*`, `bg-yellow-*`, `foreground/XX`) remain
 3. At this point Django still serves old templates (views haven't been updated). That's fine. The new templates exist side-by-side.
+
+### Implementation Notes (2.4)
+
+1. **`profile.html` and `profile-public.html` merged** into a single `pages/profile.html`. Uses `is_own_profile` context variable to conditionally show the edit form (own profile) or a read-only view (public). The view in Session 3 needs to set `profile_user` and `is_own_profile` in context.
+
+2. **11 pages instead of 12** because of the profile merge.
+
+3. **`onboarding-wallet.html` preserves the full Hyperscript flow** — connect wallet → show sign section → `signMessage()` → fetch `/api/auth/address/verify/` → redirect. The `#sign-error` element uses `text-foreground` (not `text-red-400`) since max contrast = urgency in the token system.
+
+4. **`group-detail.html` uses inline `<a>` and `<button>`** instead of `quanta/button.html` for the "Settle Up" link and "Leave" button because both need dynamic `href`/`hx-post` URLs with `{{ group.group_id }}`. Same `|add:` filter limitation as lenses.
+
+5. **Session 3 context requirements** surfaced by new pages:
+   - `pages/profile.html` needs `profile_user`, `is_own_profile`, `form` (when own)
+   - `pages/groups-list.html` needs `invited_groups`, `groups`
+   - `prisms/bottom-nav.html` needs `active_tab` via context processor
 
 ---
 
