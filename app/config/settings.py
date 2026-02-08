@@ -173,7 +173,7 @@ ARC_TESTNET_RPC_URL = os.getenv('ARC_TESTNET_RPC_URL', '')
 BACKEND_PRIVATE_KEY = os.getenv('BACKEND_PRIVATE_KEY', '')
 GATEWAY_SIGNER_KEY = os.getenv('GATEWAY_SIGNER_KEY', '')
 
-# Contract addresses (Sepolia — proxies)
+# Contract addresses (Sepolia — proxies from contracts/deployments.json)
 CONTRACT_FRIENDS = os.getenv('CONTRACT_FRIENDS', '')
 CONTRACT_GROUPS = os.getenv('CONTRACT_GROUPS', '')
 CONTRACT_EXPENSES = os.getenv('CONTRACT_EXPENSES', '')
