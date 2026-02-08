@@ -1,0 +1,38 @@
+{# photons/wallet-button.html — Wallet connect/disconnect toggle
+   Context:
+     user.is_authenticated — renders nothing if false
+   Extracted from: components/header.html wallet button + Hyperscript
+
+   Preserves exact Hyperscript behavior:
+     - on click: toggle connectWallet/disconnectWallet
+     - on walletChanged: update button text + border styling
+#}
+
+{% if user.is_authenticated %}
+<button
+  id="wallet-btn"
+  class="px-3 py-1.5 text-xs border border-border rounded-md
+         text-muted hover:text-foreground hover:border-border-hover
+         transition-colors cursor-pointer"
+  _="
+    on click
+      if walletConnected
+        call window.disconnectWallet()
+      else
+        call window.connectWallet()
+      end
+    end
+    on walletChanged from body
+      if walletConnected
+        set my textContent to walletAddress.substring(0, 6) + '...' + walletAddress.substring(38)
+        add .border-border-hover to me
+      else
+        set my textContent to 'Connect Wallet'
+        remove .border-border-hover from me
+      end
+    end
+  "
+>
+  Connect Wallet
+</button>
+{% endif %}

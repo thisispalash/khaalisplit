@@ -1,0 +1,30 @@
+{# photons/debt-arrow.html — Directional debt display (from → to)
+   Context:
+     from_subname  : string (required)
+     to_subname    : string (required)
+     from_address  : string (required) — full address, will be truncated
+     to_address    : string (required) — full address, will be truncated
+     is_payer      : bool / omit — highlights "from" name
+     is_payee      : bool / omit — highlights "to" name
+
+   NOTE for Session 2: This photon is display-only. The pay button and
+   amount display sit outside this component in the parent (e.g.
+   prisms/balance-summary.html or lenses/settlement-card.html).
+#}
+
+<div class="flex-1">
+  <div class="flex items-center gap-2 text-sm">
+    <span class="font-medium{% if is_payer %} text-foreground{% endif %}">
+      {{ from_subname }}
+    </span>
+    <span class="text-subtle">&rarr;</span>
+    <span class="font-medium{% if is_payee %} text-emphasis{% endif %}">
+      {{ to_subname }}
+    </span>
+  </div>
+  <div class="text-xs text-subtle mt-1">
+    {% include 'quanta/address.html' with address=from_address %}
+    <span class="mx-1">&rarr;</span>
+    {% include 'quanta/address.html' with address=to_address %}
+  </div>
+</div>
