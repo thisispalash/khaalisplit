@@ -166,6 +166,70 @@ contract khaaliSplitFriends is Initializable, UUPSUpgradeable, OwnableUpgradeabl
     }
 
     // ──────────────────────────────────────────────
+    //  Backend relay: friend requests
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Backend relay: send a friend request on behalf of `user`.
+     * @param user   The address sending the request.
+     * @param friend The address to send the request to.
+     */
+    function requestFriendFor(address user, address friend) external {
+        if (msg.sender != backend) revert NotBackend();
+        if (!registered[user]) revert NotRegistered(user);
+        if (!registered[friend]) revert NotRegistered(friend);
+        if (user == friend) revert CannotFriendSelf();
+        if (isFriend[user][friend]) revert AlreadyFriends();
+        if (pendingRequest[user][friend]) revert AlreadyRequested();
+
+        // If the other party already requested us, auto-accept
+        if (pendingRequest[friend][user]) {
+            isFriend[friend][user] = true;
+            isFriend[user][friend] = true;
+            _friendsList[friend].push(user);
+            _friendsList[user].push(friend);
+            delete pendingRequest[friend][user];
+            emit FriendAccepted(user, friend);
+            return;
+        }
+
+        pendingRequest[user][friend] = true;
+        emit FriendRequested(user, friend);
+    }
+
+    /**
+     * @notice Backend relay: accept a friend request on behalf of `user`.
+     * @param user      The address accepting the request.
+     * @param requester The address that originally sent the request.
+     */
+    function acceptFriendFor(address user, address requester) external {
+        if (msg.sender != backend) revert NotBackend();
+        if (!pendingRequest[requester][user]) revert NoPendingRequest();
+
+        isFriend[requester][user] = true;
+        isFriend[user][requester] = true;
+        _friendsList[requester].push(user);
+        _friendsList[user].push(requester);
+        delete pendingRequest[requester][user];
+
+        emit FriendAccepted(user, requester);
+    }
+
+    /**
+     * @notice Backend relay: remove a friend on behalf of `user`.
+     * @param user   The address removing the friend.
+     * @param friend The address to unfriend.
+     */
+    function removeFriendFor(address user, address friend) external {
+        if (msg.sender != backend) revert NotBackend();
+        if (!isFriend[user][friend]) revert NotFriends();
+
+        isFriend[user][friend] = false;
+        isFriend[friend][user] = false;
+        emit FriendRemoved(user, friend);
+    }
+
+    // ──────────────────────────────────────────────
     //  Views
     // ──────────────────────────────────────────────
 
