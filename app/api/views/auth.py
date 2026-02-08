@@ -292,6 +292,15 @@ def verify_signature(request):
       'linked_address': linked,
       'success': True,
     })
+
+  # Non-HTMX fetch (Hyperscript): return JSON so the client can handle redirect
+  content_type = request.content_type or ''
+  if 'application/json' in content_type:
+    return HttpResponse(
+      json.dumps({'ok': True, 'address': address}),
+      content_type='application/json',
+    )
+
   return redirect('/')
 
 
