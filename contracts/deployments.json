@@ -1,9 +1,9 @@
 {
   "11155111": {
     "impl": {
-      "khaaliSplitExpenses": "0x35209e81ce10e274Cf176ce76B1d2ea9A20c09A7",
-      "khaaliSplitFriends": "0x76D1434d63cDA4638fCA81494De361658e688C7d",
-      "khaaliSplitGroups": "0x5F714A11F77C7F44A116f7619b9287B88b469990",
+      "khaaliSplitExpenses": "0x187eb3155ef1FaF4CD72DEdd7586674bF775daF3",
+      "khaaliSplitFriends": "0xee47547be03F5D53Be908c226d2271d0f4D54643",
+      "khaaliSplitGroups": "0x3b12bFDedFAcFC65deA612aB7291404b06214CF3",
       "khaaliSplitReputation": "0x1A728640de3C2d100d3526e710E4D1eF79bc27eC",
       "khaaliSplitResolver": "0x4c39c4d2a0FD2B9138dFFd8435aaAdA40b22af51",
       "khaaliSplitSubnames": "0x9C8531B1afdd1e19f0A1ebb005360D0deB91F8DE"

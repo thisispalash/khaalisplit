@@ -1,39 +1,431 @@
-khaaliSplit Gas Report
-Generated via: forge test --gas-report
-Generated date: 2026-02-06
-Solc 0.8.28 | Cancun EVM | Optimizer 200 runs
-116/116 tests passing
+No files changed, compilation skipped
+
+Ran 47 tests for test/khaaliSplitSubnames.t.sol:khaaliSplitSubnamesTest
+[PASS] test_addr_unregisteredNode_returnsZero() (gas: 12861)
+[PASS] test_implementation_cannotInitialize() (gas: 1521111)
+[PASS] test_initialize_cannotReinitialize() (gas: 45255)
+[PASS] test_initialize_setsState() (gas: 58967)
+[PASS] test_initialize_zeroBackend_reverts() (gas: 1645065)
+[PASS] test_initialize_zeroNameWrapper_reverts() (gas: 1644985)
+[PASS] test_initialize_zeroOwner_reverts() (gas: 1645075)
+[PASS] test_register_duplicateLabel_reverts() (gas: 324010)
+[PASS] test_register_emitsAddrRecordSet() (gas: 282436)
+[PASS] test_register_emptyLabel_reverts() (gas: 42255)
+[PASS] test_register_multipleSubnames() (gas: 500483)
+[PASS] test_register_notBackend_reverts() (gas: 40520)
+[PASS] test_register_ownerCannotRegister_reverts() (gas: 42595)
+[PASS] test_register_setsDefaultAddrRecord() (gas: 290777)
+[PASS] test_register_setsDefaultTextRecords() (gas: 308381)
+[PASS] test_register_success() (gas: 308306)
+[PASS] test_register_zeroAddress_reverts() (gas: 40269)
+[PASS] test_setAddr_byBackend() (gas: 327074)
+[PASS] test_setAddr_bySubnameOwner() (gas: 338703)
+[PASS] test_setAddr_unauthorized_reverts() (gas: 323332)
+[PASS] test_setBackend_newBackendCanRegister() (gas: 350757)
+[PASS] test_setBackend_notOwner_reverts() (gas: 41121)
+[PASS] test_setBackend_success() (gas: 56342)
+[PASS] test_setBackend_zeroAddress_reverts() (gas: 39367)
+[PASS] test_setReputationContract_allowsZero() (gas: 98620)
+[PASS] test_setReputationContract_notOwner_reverts() (gas: 41681)
+[PASS] test_setReputationContract_success() (gas: 76279)
+[PASS] test_setText_byBackend() (gas: 351151)
+[PASS] test_setText_byReputationContract() (gas: 393618)
+[PASS] test_setText_bySubnameOwner() (gas: 364051)
+[PASS] test_setText_cannotModifyOtherSubname() (gas: 482757)
+[PASS] test_setText_multipleKeys() (gas: 688759)
+[PASS] test_setText_overwriteExisting() (gas: 411064)
+[PASS] test_setText_reputationContractZero_noAuth() (gas: 323802)
+[PASS] test_setText_unauthorizedUser_reverts() (gas: 324544)
+[PASS] test_subnameNode_computation() (gas: 13564)
+[PASS] test_subnameNode_consistency() (gas: 23642)
+[PASS] test_subnameNode_differentLabels() (gas: 23775)
+[PASS] test_supportsInterface_IAddrResolver() (gas: 10647)
+[PASS] test_supportsInterface_IERC165() (gas: 10769)
+[PASS] test_supportsInterface_ITextResolver() (gas: 10730)
+[PASS] test_supportsInterface_unsupported() (gas: 10794)
+[PASS] test_text_unregisteredNode_returnsEmpty() (gas: 17439)
+[PASS] test_text_unsetKey_returnsEmpty() (gas: 293182)
+[PASS] test_upgrade_notOwner_reverts() (gas: 1525931)
+[PASS] test_upgrade_onlyOwner() (gas: 1533295)
+[PASS] test_upgrade_preservesState() (gas: 1935862)
+Suite result: ok. 47 passed; 0 failed; 0 skipped; finished in 18.75ms (6.85ms CPU time)
+
+Ran 6 tests for test/kdioDeployer.t.sol:kdioDeployerTest
+[PASS] test_deploy_differentSalts_differentAddresses() (gas: 1958736)
+[PASS] test_deploy_emitsEvent() (gas: 1785207)
+[PASS] test_deploy_emptyInitData_thenInitialize() (gas: 3505310)
+[PASS] test_deploy_matchesComputeAddress() (gas: 1800224)
+[PASS] test_deploy_sameSaltSameBytecode_sameAddress() (gas: 2519363)
+[PASS] test_deploy_sameSaltTwice_reverts() (gas: 1040506097)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 16.99ms (5.22ms CPU time)
+
+Ran 27 tests for test/khaaliSplitExpenses.t.sol:khaaliSplitExpensesTest
+[PASS] test_addExpenseFor_notBackend_reverts() (gas: 47619)
+[PASS] test_addExpenseFor_notGroupMember_reverts() (gas: 63016)
+[PASS] test_addExpenseFor_originalStillWorks() (gas: 215613)
+[PASS] test_addExpenseFor_success() (gas: 268480)
+[PASS] test_addExpense_byMember() (gas: 246466)
+[PASS] test_addExpense_emitsEvent() (gas: 219706)
+[PASS] test_addExpense_encryptedDataInEvent() (gas: 217536)
+[PASS] test_addExpense_multipleExpensesPerGroup() (gas: 572108)
+[PASS] test_addExpense_nonMember_reverts() (gas: 58170)
+[PASS] test_getGroupExpenses_empty() (gas: 13249)
+[PASS] test_initialize_cannotReinitialize() (gas: 41966)
+[PASS] test_initialize_setsState() (gas: 36489)
+[PASS] test_setBackend_expenses_notOwner_reverts() (gas: 39720)
+[PASS] test_setBackend_expenses_success() (gas: 53471)
+[PASS] test_updateExpenseFor_doesNotExist_reverts() (gas: 45678)
+[PASS] test_updateExpenseFor_notBackend_reverts() (gas: 247572)
+[PASS] test_updateExpenseFor_notCreator_reverts() (gas: 254440)
+[PASS] test_updateExpenseFor_notGroupMember_reverts() (gas: 298115)
+[PASS] test_updateExpenseFor_originalStillWorks() (gas: 286271)
+[PASS] test_updateExpenseFor_success() (gas: 302954)
+[PASS] test_updateExpense_doesNotExist_reverts() (gas: 40914)
+[PASS] test_updateExpense_emitsEvent() (gas: 275923)
+[PASS] test_updateExpense_notCreator_reverts() (gas: 249556)
+[PASS] test_updateExpense_notGroupMember_reverts() (gas: 293246)
+[PASS] test_updateExpense_success() (gas: 294299)
+[PASS] test_upgrade_notOwner_reverts() (gas: 1291502)
+[PASS] test_upgrade_onlyOwner() (gas: 1298977)
+Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 20.06ms (7.42ms CPU time)
+
+Ran 44 tests for test/khaaliSplitFriends.t.sol:khaaliSplitFriendsTest
+[PASS] test_acceptFriendFor_noPending_reverts() (gas: 206535)
+[PASS] test_acceptFriendFor_notBackend_reverts() (gas: 265029)
+[PASS] test_acceptFriendFor_originalStillWorks() (gas: 400986)
+[PASS] test_acceptFriendFor_success() (gas: 465626)
+[PASS] test_acceptFriend_noPending_reverts() (gas: 203847)
+[PASS] test_acceptFriend_success() (gas: 432225)
+[PASS] test_getFriends_returnsList() (gas: 710509)
+[PASS] test_initialize_cannotReinitialize() (gas: 41991)
+[PASS] test_initialize_setsState() (gas: 26942)
+[PASS] test_registerPubKey_alreadyRegistered_reverts() (gas: 125444)
+[PASS] test_registerPubKey_byBackend() (gas: 118837)
+[PASS] test_registerPubKey_emitsEvent() (gas: 94150)
+[PASS] test_registerPubKey_notBackend_reverts() (gas: 42744)
+[PASS] test_removeFriendFor_notBackend_reverts() (gas: 423599)
+[PASS] test_removeFriendFor_notFriends_reverts() (gas: 206668)
+[PASS] test_removeFriendFor_originalStillWorks() (gas: 425367)
+[PASS] test_removeFriendFor_success() (gas: 443854)
+[PASS] test_removeFriend_bothDirections() (gas: 439885)
+[PASS] test_removeFriend_canReRequest() (gas: 624856)
+[PASS] test_removeFriend_emitsEvent() (gas: 419094)
+[PASS] test_removeFriend_notFriends_reverts() (gas: 203738)
+[PASS] test_removeFriend_success() (gas: 439908)
+[PASS] test_requestFriendFor_alreadyFriends_reverts() (gas: 435940)
+[PASS] test_requestFriendFor_alreadyRequested_reverts() (gas: 277181)
+[PASS] test_requestFriendFor_mutualRequest_autoAccepts() (gas: 507148)
+[PASS] test_requestFriendFor_notBackend_reverts() (gas: 204403)
+[PASS] test_requestFriendFor_notRegistered_friend_reverts() (gas: 129311)
+[PASS] test_requestFriendFor_notRegistered_user_reverts() (gas: 127067)
+[PASS] test_requestFriendFor_originalStillWorks() (gas: 242629)
+[PASS] test_requestFriendFor_self_reverts() (gas: 124780)
+[PASS] test_requestFriendFor_success() (gas: 247736)
+[PASS] test_requestFriend_alreadyFriends_reverts() (gas: 427367)
+[PASS] test_requestFriend_alreadyRequested_reverts() (gas: 271228)
+[PASS] test_requestFriend_mutualRequest_autoAccepts() (gas: 532137)
+[PASS] test_requestFriend_mutualRequest_emitsFriendAccepted() (gas: 401621)
+[PASS] test_requestFriend_mutualRequest_thenAlreadyFriends() (gas: 434321)
+[PASS] test_requestFriend_notRegistered_sender_reverts() (gas: 124147)
+[PASS] test_requestFriend_notRegistered_target_reverts() (gas: 126377)
+[PASS] test_requestFriend_self_reverts() (gas: 121949)
+[PASS] test_requestFriend_success() (gas: 244764)
+[PASS] test_setBackend_notOwner_reverts() (gas: 39622)
+[PASS] test_setBackend_onlyOwner() (gas: 53590)
+[PASS] test_upgrade_notOwner_reverts() (gas: 1627348)
+[PASS] test_upgrade_onlyOwner() (gas: 1634799)
+Suite result: ok. 44 passed; 0 failed; 0 skipped; finished in 20.61ms (8.81ms CPU time)
+
+Ran 17 tests for test/khaaliSplitResolver.t.sol:khaaliSplitResolverTest
+[PASS] test_addSigner_notOwner_reverts() (gas: 40398)
+[PASS] test_addSigner_onlyOwner() (gas: 71827)
+[PASS] test_initialize_cannotReinitialize() (gas: 40894)
+[PASS] test_initialize_setsState() (gas: 52420)
+[PASS] test_removeSigner_notOwner_reverts() (gas: 40936)
+[PASS] test_removeSigner_onlyOwner() (gas: 45863)
+[PASS] test_resolveWithProof_expired_reverts() (gas: 27449)
+[PASS] test_resolveWithProof_invalidSigner_reverts() (gas: 33123)
+[PASS] test_resolveWithProof_validSignature() (gas: 36698)
+[PASS] test_resolve_revertsWithOffchainLookup() (gas: 252568)
+[PASS] test_setUrl_notOwner_reverts() (gas: 39148)
+[PASS] test_setUrl_onlyOwner() (gas: 74540)
+[PASS] test_supportsInterface_IERC165() (gas: 10656)
+[PASS] test_supportsInterface_IExtendedResolver() (gas: 10570)
+[PASS] test_supportsInterface_random_returnsFalse() (gas: 10621)
+[PASS] test_upgrade_notOwner_reverts() (gas: 1450420)
+[PASS] test_upgrade_onlyOwner() (gas: 1458517)
+Suite result: ok. 17 passed; 0 failed; 0 skipped; finished in 23.66ms (11.26ms CPU time)
+
+Ran 45 tests for test/khaaliSplitGroups.t.sol:khaaliSplitGroupsTest
+[PASS] test_acceptGroupInviteFor_notBackend_reverts() (gas: 364695)
+[PASS] test_acceptGroupInviteFor_notInvited_reverts() (gas: 271941)
+[PASS] test_acceptGroupInviteFor_originalStillWorks() (gas: 421863)
+[PASS] test_acceptGroupInviteFor_success() (gas: 455462)
+[PASS] test_acceptGroupInvite_notInvited_reverts() (gas: 267130)
+[PASS] test_acceptGroupInvite_success() (gas: 450710)
+[PASS] test_createGroupFor_notBackend_reverts() (gas: 45393)
+[PASS] test_createGroupFor_notRegistered_reverts() (gas: 57303)
+[PASS] test_createGroupFor_originalStillWorks() (gas: 242932)
+[PASS] test_createGroupFor_success() (gas: 300263)
+[PASS] test_createGroup_emitsEvent() (gas: 236980)
+[PASS] test_createGroup_notRegistered_reverts() (gas: 52407)
+[PASS] test_createGroup_success() (gas: 290957)
+[PASS] test_getGroupCreator() (gas: 244762)
+[PASS] test_getMembers_returnsList() (gas: 431524)
+[PASS] test_initialize_cannotReinitialize() (gas: 42022)
+[PASS] test_initialize_setsState() (gas: 36632)
+[PASS] test_inviteMemberFor_alreadyInvited_reverts() (gas: 390726)
+[PASS] test_inviteMemberFor_alreadyMember_reverts() (gas: 467861)
+[PASS] test_inviteMemberFor_groupDoesNotExist_reverts() (gas: 50067)
+[PASS] test_inviteMemberFor_notBackend_reverts() (gas: 270810)
+[PASS] test_inviteMemberFor_notFriends_reverts() (gas: 290613)
+[PASS] test_inviteMemberFor_notGroupMember_reverts() (gas: 275554)
+[PASS] test_inviteMemberFor_originalStillWorks() (gas: 342473)
+[PASS] test_inviteMemberFor_success() (gas: 369187)
+[PASS] test_inviteMember_alreadyInvited_reverts() (gas: 385974)
+[PASS] test_inviteMember_alreadyMember_reverts() (gas: 463105)
+[PASS] test_inviteMember_groupDoesNotExist_reverts() (gas: 45341)
+[PASS] test_inviteMember_notFriends_reverts() (gas: 285856)
+[PASS] test_inviteMember_notGroupMember_reverts() (gas: 270815)
+[PASS] test_inviteMember_success() (gas: 364442)
+[PASS] test_leaveGroupFor_creatorCannotLeave_reverts() (gas: 271930)
+[PASS] test_leaveGroupFor_notBackend_reverts() (gas: 444123)
+[PASS] test_leaveGroupFor_notMember_reverts() (gas: 271952)
+[PASS] test_leaveGroupFor_originalStillWorks() (gas: 450531)
+[PASS] test_leaveGroupFor_success() (gas: 487605)
+[PASS] test_leaveGroup_canBeReinvited() (gas: 658741)
+[PASS] test_leaveGroup_creatorCannotLeave() (gas: 267204)
+[PASS] test_leaveGroup_emitsEvent() (gas: 444267)
+[PASS] test_leaveGroup_notMember_reverts() (gas: 267198)
+[PASS] test_leaveGroup_success() (gas: 481451)
+[PASS] test_setBackend_notOwner_reverts() (gas: 39601)
+[PASS] test_setBackend_success() (gas: 53454)
+[PASS] test_upgrade_notOwner_reverts() (gas: 1911186)
+[PASS] test_upgrade_onlyOwner() (gas: 1918506)
+Suite result: ok. 45 passed; 0 failed; 0 skipped; finished in 24.62ms (12.63ms CPU time)
+
+Ran 15 tests for test/integration/UserFlows.t.sol:UserFlowsTest
+[PASS] test_flow_authorization_boundaries_cross_user_records() (gas: 1133062)
+[PASS] test_flow_authorization_replay_protection() (gas: 1490143)
+[PASS] test_flow_golden_path_full_lifecycle() (gas: 3960519)
+[PASS] test_flow_kdioDeployer_fullStack() (gas: 12437958)
+[PASS] test_flow_leaveGroup_and_updateExpense() (gas: 2573855)
+[PASS] test_flow_multiUser_isolation() (gas: 2409381)
+[PASS] test_flow_offline_settlement_different_submitter() (gas: 1660572)
+[PASS] test_flow_onboarding_friends_group_expense() (gas: 2648017)
+[PASS] test_flow_onboarding_settle_reputation_gateway() (gas: 1445414)
+[PASS] test_flow_removeFriend_no_cascade() (gas: 2116266)
+[PASS] test_flow_reputation_sync_via_settlement() (gas: 1933399)
+[PASS] test_flow_settleFromGateway() (gas: 1429527)
+[PASS] test_flow_settle_cctp_routing() (gas: 1513698)
+[PASS] test_flow_subname_registration_and_records() (gas: 803192)
+[PASS] test_flow_wiring_verification_reputation_requires_settlement() (gas: 4321531)
+Suite result: ok. 15 passed; 0 failed; 0 skipped; finished in 29.41ms (25.54ms CPU time)
+
+Ran 60 tests for test/khaaliSplitReputation.t.sol:khaaliSplitReputationTest
+[PASS] test_constants() (gas: 41478)
+[PASS] test_getReputation_afterFailure() (gas: 278624)
+[PASS] test_getReputation_afterSuccess() (gas: 278731)
+[PASS] test_getReputation_defaultBeforeAnySettlement() (gas: 73685)
+[PASS] test_getReputation_defaultForUnknownUser() (gas: 14892)
+[PASS] test_implementation_cannotInitialize() (gas: 1216288)
+[PASS] test_initialize_cannotReinitialize() (gas: 47279)
+[PASS] test_initialize_setsState() (gas: 51085)
+[PASS] test_initialize_zeroBackend_reverts() (gas: 1340187)
+[PASS] test_initialize_zeroOwner_reverts() (gas: 1340211)
+[PASS] test_initialize_zeroSettlementContract_allowed() (gas: 1439234)
+[PASS] test_initialize_zeroSubnameRegistry_allowed() (gas: 1439339)
+[PASS] test_multiUser_scoresAreIndependent() (gas: 944641)
+[PASS] test_recordSettlement_byBackend_reverts() (gas: 96342)
+[PASS] test_recordSettlement_byOwner_reverts() (gas: 98333)
+[PASS] test_recordSettlement_ensSyncValueAt100() (gas: 7853244)
+[PASS] test_recordSettlement_ensSyncValueIsCorrectString() (gas: 1565072)
+[PASS] test_recordSettlement_failure_atMinStaysAtMin() (gas: 1691111)
+[PASS] test_recordSettlement_failure_decrementsScore() (gas: 276502)
+[PASS] test_recordSettlement_failure_emitsEvent() (gas: 270571)
+[PASS] test_recordSettlement_failure_flooredAtMin() (gas: 1551214)
+[PASS] test_recordSettlement_firstCall_initializesToDefault() (gas: 303417)
+[PASS] test_recordSettlement_mixed_failureThenSuccess() (gas: 1067760)
+[PASS] test_recordSettlement_mixed_successThenFailure() (gas: 680555)
+[PASS] test_recordSettlement_multipleFailures() (gas: 792657)
+[PASS] test_recordSettlement_multipleSuccesses() (gas: 1438834)
+[PASS] test_recordSettlement_noENSSync_whenRegistryZero() (gas: 1586971)
+[PASS] test_recordSettlement_notSettlementContract_reverts() (gas: 96257)
+[PASS] test_recordSettlement_scoreAt4_failureGoesToZero() (gas: 1719166)
+[PASS] test_recordSettlement_scoreAt5_failureGoesToZero() (gas: 1444553)
+[PASS] test_recordSettlement_scoreAt99_successGoesTo100() (gas: 6620683)
+[PASS] test_recordSettlement_success_atMaxStaysAtMax() (gas: 7979523)
+[PASS] test_recordSettlement_success_cappedAtMax() (gas: 7839423)
+[PASS] test_recordSettlement_success_emitsEvent() (gas: 270589)
+[PASS] test_recordSettlement_success_incrementsScore() (gas: 276587)
+[PASS] test_recordSettlement_syncsCorrectNode_perUser() (gas: 547616)
+[PASS] test_recordSettlement_syncsToENS() (gas: 291328)
+[PASS] test_recordSettlement_syncsToENS_multipleUpdates() (gas: 582691)
+[PASS] test_recordSettlement_userNodeNotSet_reverts() (gas: 44224)
+[PASS] test_setBackend_notOwner_reverts() (gas: 41050)
+[PASS] test_setBackend_oldBackendLosesAuth() (gas: 143981)
+[PASS] test_setBackend_success() (gas: 56290)
+[PASS] test_setBackend_zeroAddress_reverts() (gas: 39328)
+[PASS] test_setSettlementContract_allowsZero() (gas: 43450)
+[PASS] test_setSettlementContract_notOwner_reverts() (gas: 41161)
+[PASS] test_setSettlementContract_oldSettlementLosesAuth() (gas: 346667)
+[PASS] test_setSettlementContract_success() (gas: 56391)
+[PASS] test_setSubnameRegistry_allowsZero() (gas: 43561)
+[PASS] test_setSubnameRegistry_notOwner_reverts() (gas: 41116)
+[PASS] test_setSubnameRegistry_success() (gas: 56414)
+[PASS] test_setUserNode_byOwner_reverts() (gas: 42189)
+[PASS] test_setUserNode_bySettlement_reverts() (gas: 42265)
+[PASS] test_setUserNode_multipleUsers() (gas: 142154)
+[PASS] test_setUserNode_notBackend_reverts() (gas: 40199)
+[PASS] test_setUserNode_success() (gas: 75751)
+[PASS] test_setUserNode_zeroNode_reverts() (gas: 41869)
+[PASS] test_setUserNode_zeroUser_reverts() (gas: 39898)
+[PASS] test_upgrade_notOwner_reverts() (gas: 1219015)
+[PASS] test_upgrade_onlyOwner() (gas: 1226358)
+[PASS] test_upgrade_preservesState() (gas: 1702351)
+Suite result: ok. 60 passed; 0 failed; 0 skipped; finished in 10.22ms (20.29ms CPU time)
+
+Ran 70 tests for test/khaaliSplitSettlement.t.sol:khaaliSplitSettlementTest
+[PASS] test_addToken_revertsNotOwner() (gas: 41110)
+[PASS] test_addToken_revertsZeroAddress() (gas: 39390)
+[PASS] test_addToken_success() (gas: 73587)
+[PASS] test_cctp_domainZeroWorks() (gas: 671831)
+[PASS] test_cctp_emitsEvent() (gas: 681400)
+[PASS] test_cctp_movesTokensCorrectly() (gas: 704935)
+[PASS] test_cctp_revertsIfNoDomainInTextRecord() (gas: 419228)
+[PASS] test_cctp_revertsIfTokenMessengerNotSet() (gas: 489900)
+[PASS] test_cctp_success() (gas: 700994)
+[PASS] test_configureDomain_revertsNotOwner() (gas: 39483)
+[PASS] test_configureDomain_success() (gas: 84727)
+[PASS] test_gatewayMint_anyoneCanCall() (gas: 409782)
+[PASS] test_gatewayMint_emitsEvent() (gas: 405960)
+[PASS] test_gatewayMint_handlesPartialMint() (gas: 449361)
+[PASS] test_gatewayMint_reputationNotSet_emits500() (gas: 337626)
+[PASS] test_gatewayMint_revertsIfMintFails() (gas: 146022)
+[PASS] test_gatewayMint_revertsIfMinterNotSet() (gas: 74972)
+[PASS] test_gatewayMint_revertsIfRecipientNotRegistered() (gas: 322368)
+[PASS] test_gatewayMint_revertsIfSubnameRegistryNotSet() (gas: 2323792)
+[PASS] test_gatewayMint_revertsIfTokenNotAllowed() (gas: 151556)
+[PASS] test_gatewayMint_revertsIfZeroMinted() (gas: 214327)
+[PASS] test_gatewayMint_revertsIfZeroRecipientNode() (gas: 41998)
+[PASS] test_gatewayMint_routesViaCCTP() (gas: 785026)
+[PASS] test_gatewayMint_success() (gas: 434504)
+[PASS] test_gatewayMint_updatesReputation() (gas: 412419)
+[PASS] test_gatewayMint_withMemo() (gas: 407332)
+[PASS] test_gateway_anyoneCanSubmit() (gas: 346966)
+[PASS] test_gateway_defaultIfFlowEmpty() (gas: 596941)
+[PASS] test_gateway_emitsSettlementCompleted() (gas: 350587)
+[PASS] test_gateway_movesTokensCorrectly() (gas: 372107)
+[PASS] test_gateway_success() (gas: 364002)
+[PASS] test_gateway_unknownFlowDefaultsToGateway() (gas: 617365)
+[PASS] test_gateway_updatesReputation() (gas: 357031)
+[PASS] test_gateway_withMemo() (gas: 351754)
+[PASS] test_implementation_cannotInitialize() (gas: 2113207)
+[PASS] test_initialize_revertsOnReinit() (gas: 39418)
+[PASS] test_initialize_revertsZeroOwner() (gas: 2237129)
+[PASS] test_initialize_setsOwner() (gas: 14908)
+[PASS] test_initialize_state() (gas: 83223)
+[PASS] test_nonceReplay_reverts() (gas: 425563)
+[PASS] test_removeToken_revertsNotOwner() (gas: 41640)
+[PASS] test_removeToken_success() (gas: 47688)
+[PASS] test_reputation_multipleSettlements() (gas: 592875)
+[PASS] test_reputation_notSet_emits500() (gas: 282277)
+[PASS] test_reputation_notSet_skipsCall() (gas: 281845)
+[PASS] test_setGatewayMinter_allowsZero() (gas: 43521)
+[PASS] test_setGatewayMinter_revertsNotOwner() (gas: 41177)
+[PASS] test_setGatewayMinter_success() (gas: 56395)
+[PASS] test_setGatewayWallet_allowsZero() (gas: 43389)
+[PASS] test_setGatewayWallet_revertsNotOwner() (gas: 41088)
+[PASS] test_setGatewayWallet_success() (gas: 56363)
+[PASS] test_setReputationContract_allowsZero() (gas: 43479)
+[PASS] test_setReputationContract_revertsNotOwner() (gas: 41177)
+[PASS] test_setReputationContract_success() (gas: 56329)
+[PASS] test_setSubnameRegistry_revertsNotOwner() (gas: 41067)
+[PASS] test_setSubnameRegistry_success() (gas: 56441)
+[PASS] test_setTokenMessenger_allowsZero() (gas: 43499)
+[PASS] test_setTokenMessenger_revertsNotOwner() (gas: 41153)
+[PASS] test_setTokenMessenger_success() (gas: 56439)
+[PASS] test_settle_revertsNotImplemented() (gas: 13780)
+[PASS] test_upgrade_ownerOnly() (gas: 2131477)
+[PASS] test_upgrade_preservesState() (gas: 2537655)
+[PASS] test_upgrade_revertsNotOwner() (gas: 2124023)
+[PASS] test_validation_revertsIfGatewayWalletNotSet() (gas: 180580)
+[PASS] test_validation_revertsIfRecipientNotRegistered() (gas: 51008)
+[PASS] test_validation_revertsIfSubnameRegistryNotSet() (gas: 2324293)
+[PASS] test_validation_revertsIfTokenNotAllowed() (gas: 153070)
+[PASS] test_validation_revertsIfTokenTextRecordEmpty() (gas: 86406)
+[PASS] test_validation_revertsZeroAmount() (gas: 42971)
+[PASS] test_validation_revertsZeroRecipientNode() (gas: 42611)
+Suite result: ok. 70 passed; 0 failed; 0 skipped; finished in 29.44ms (20.95ms CPU time)
+
+╭-------------------------------------------------------------------------------------------+-----------------+-------+--------+--------+---------╮
+| lib/openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol:ERC1967Proxy Contract |                 |       |        |        |         |
++=================================================================================================================================================+
+| Deployment Cost                                                                           | Deployment Size |       |        |        |         |
+|-------------------------------------------------------------------------------------------+-----------------+-------+--------+--------+---------|
+| 165705                                                                                    | 1025            |       |        |        |         |
+|-------------------------------------------------------------------------------------------+-----------------+-------+--------+--------+---------|
+|                                                                                           |                 |       |        |        |         |
+|-------------------------------------------------------------------------------------------+-----------------+-------+--------+--------+---------|
+| Function Name                                                                             | Min             | Avg   | Median | Max    | # Calls |
+|-------------------------------------------------------------------------------------------+-----------------+-------+--------+--------+---------|
+| fallback                                                                                  | 1186            | 74358 | 53105  | 450897 | 2751    |
+╰-------------------------------------------------------------------------------------------+-----------------+-------+--------+--------+---------╯
+
+╭--------------------------------------------+-----------------+----------+--------+------------+---------╮
+| src/kdioDeployer.sol:kdioDeployer Contract |                 |          |        |            |         |
++=========================================================================================================+
+| Deployment Cost                            | Deployment Size |          |        |            |         |
+|--------------------------------------------+-----------------+----------+--------+------------+---------|
+| 425804                                     | 1751            |          |        |            |         |
+|--------------------------------------------+-----------------+----------+--------+------------+---------|
+|                                            |                 |          |        |            |         |
+|--------------------------------------------+-----------------+----------+--------+------------+---------|
+| Function Name                              | Min             | Avg      | Median | Max        | # Calls |
+|--------------------------------------------+-----------------+----------+--------+------------+---------|
+| computeAddress                             | 2227            | 2227     | 2227   | 2227       | 6       |
+|--------------------------------------------+-----------------+----------+--------+------------+---------|
+| deploy                                     | 106092          | 80066519 | 178451 | 1038727151 | 13      |
+╰--------------------------------------------+-----------------+----------+--------+------------+---------╯
 
 ╭----------------------------------------------------------+-----------------+--------+--------+--------+---------╮
 | src/khaaliSplitExpenses.sol:khaaliSplitExpenses Contract |                 |        |        |        |         |
 +=================================================================================================================+
 | Deployment Cost                                          | Deployment Size |        |        |        |         |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| 958210                                                   | 4314            |        |        |        |         |
+| 1217525                                                  | 5513            |        |        |        |         |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
 |                                                          |                 |        |        |        |         |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | Function Name                                            | Min             | Avg    | Median | Max    | # Calls |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| addExpense                                               | 13117           | 146282 | 171478 | 171478 | 18      |
+| addExpense                                               | 13308           | 152150 | 171658 | 171658 | 25      |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| expenseCount                                             | 2361            | 2361   | 2361   | 2361   | 4       |
+| addExpenseFor                                            | 2833            | 64116  | 15585  | 173931 | 3       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| backend                                                  | 2349            | 2349   | 2349   | 2349   | 1       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| expenseCount                                             | 2361            | 2361   | 2361   | 2361   | 5       |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | getExpense                                               | 8902            | 8902   | 8902   | 8902   | 6       |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| getGroupExpenses                                         | 2715            | 6491   | 7260   | 9498   | 3       |
+| getGroupExpenses                                         | 2715            | 6123   | 6141   | 9498   | 4       |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| groupRegistry                                            | 2348            | 2348   | 2348   | 2348   | 2       |
+| groupRegistry                                            | 2370            | 2370   | 2370   | 2370   | 1       |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| initialize                                               | 2912            | 67809  | 70900  | 70900  | 22      |
+| initialize                                               | 2934            | 69340  | 70922  | 70922  | 43      |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | owner                                                    | 2364            | 2364   | 2364   | 2364   | 1       |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | proxiableUUID                                            | 348             | 348    | 348    | 348    | 1       |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| updateExpense                                            | 2761            | 18813  | 22829  | 30768  | 6       |
+| setBackend                                               | 2646            | 23402  | 24754  | 24754  | 29      |
 |----------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| upgradeToAndCall                                         | 3226            | 7120   | 7120   | 11014  | 2       |
+| updateExpense                                            | 2798            | 20244  | 28126  | 30926  | 7       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| updateExpenseFor                                         | 2851            | 13331  | 5285   | 33259  | 5       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| upgradeToAndCall                                         | 3248            | 7142   | 7142   | 11036  | 2       |
 ╰----------------------------------------------------------+-----------------+--------+--------+--------+---------╯
 
 ╭--------------------------------------------------------+-----------------+--------+--------+--------+---------╮
@@ -41,41 +433,47 @@ Solc 0.8.28 | Cancun EVM | Optimizer 200 runs
 +===============================================================================================================+
 | Deployment Cost                                        | Deployment Size |        |        |        |         |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| 1259913                                                | 5709            |        |        |        |         |
+| 1552972                                                | 7064            |        |        |        |         |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
 |                                                        |                 |        |        |        |         |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | Function Name                                          | Min             | Avg    | Median | Max    | # Calls |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| acceptFriend                                           | 2689            | 136934 | 140573 | 140573 | 52      |
+| acceptFriend                                           | 2711            | 138037 | 140624 | 140624 | 93      |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| backend                                                | 2348            | 2348   | 2348   | 2348   | 4       |
+| acceptFriendFor                                        | 2605            | 73284  | 73856  | 142820 | 4       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| getFriends                                             | 5229            | 5608   | 5229   | 7506   | 6       |
+| backend                                                | 2370            | 2370   | 2370   | 2370   | 4       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| getPubKey                                              | 3493            | 3493   | 3493   | 3493   | 1       |
+| getFriends                                             | 5251            | 5478   | 5251   | 7528   | 10      |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| initialize                                             | 2956            | 70049  | 70944  | 70944  | 76      |
+| getPubKey                                              | 3515            | 3515   | 3515   | 3515   | 1       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| isFriend                                               | 2747            | 2747   | 2747   | 2747   | 54      |
+| initialize                                             | 2889            | 70387  | 70877  | 70877  | 139     |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| owner                                                  | 2364            | 2364   | 2364   | 2364   | 3       |
+| isFriend                                               | 2769            | 2769   | 2769   | 2769   | 84      |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| pendingRequest                                         | 2767            | 2767   | 2767   | 2767   | 5       |
+| owner                                                  | 2386            | 2386   | 2386   | 2386   | 3       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| proxiableUUID                                          | 348             | 348    | 348    | 348    | 1       |
+| pendingRequest                                         | 2789            | 2789   | 2789   | 2789   | 11      |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| registerPubKey                                         | 2680            | 49114  | 49727  | 49727  | 150     |
+| proxiableUUID                                          | 370             | 370    | 370    | 370    | 1       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| registered                                             | 2617            | 2617   | 2617   | 2617   | 39      |
+| registerPubKey                                         | 2702            | 49429  | 49749  | 49749  | 287     |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| removeFriend                                           | 2644            | 10821  | 12457  | 12457  | 6       |
+| registered                                             | 2639            | 2639   | 2639   | 2639   | 75      |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| requestFriend                                          | 2660            | 41224  | 33503  | 147623 | 73      |
+| removeFriend                                           | 2666            | 11077  | 12479  | 12479  | 7       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| setBackend                                             | 2602            | 5105   | 5105   | 7609   | 2       |
+| removeFriendFor                                        | 2693            | 7489   | 4980   | 14796  | 3       |
 |--------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| upgradeToAndCall                                       | 3181            | 7075   | 7075   | 10969  | 2       |
+| requestFriend                                          | 2582            | 35871  | 33414  | 147563 | 111     |
+|--------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| requestFriendFor                                       | 2714            | 30420  | 11771  | 149988 | 11      |
+|--------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setBackend                                             | 2624            | 5127   | 5127   | 7631   | 2       |
+|--------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| upgradeToAndCall                                       | 3203            | 7108   | 7108   | 11013  | 2       |
 ╰--------------------------------------------------------+-----------------+--------+--------+--------+---------╯
 
 ╭------------------------------------------------------+-----------------+--------+--------+--------+---------╮
@@ -83,44 +481,108 @@ Solc 0.8.28 | Cancun EVM | Optimizer 200 runs
 +=============================================================================================================+
 | Deployment Cost                                      | Deployment Size |        |        |        |         |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| 1329575                                              | 6031            |        |        |        |         |
+| 1836286                                              | 8374            |        |        |        |         |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
 |                                                      |                 |        |        |        |         |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | Function Name                                        | Min             | Avg    | Median | Max    | # Calls |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| acceptGroupInvite                                    | 2614            | 60047  | 61900  | 61900  | 32      |
+| acceptGroupInvite                                    | 2614            | 60638  | 61900  | 61900  | 47      |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| createGroup                                          | 13087           | 187993 | 192852 | 192852 | 37      |
+| acceptGroupInviteFor                                 | 2590            | 23923  | 4937   | 64244  | 3       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| encryptedGroupKey                                    | 3350            | 3439   | 3439   | 3529   | 4       |
+| backend                                              | 2349            | 2349   | 2349   | 2349   | 1       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| friendRegistry                                       | 2357            | 2357   | 2357   | 2357   | 2       |
+| createGroup                                          | 13087           | 190086 | 192852 | 192852 | 65      |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| getGroupCreator                                      | 2547            | 2547   | 2547   | 2547   | 2       |
+| createGroupFor                                       | 2801            | 71123  | 15381  | 195187 | 3       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| getMembers                                           | 7381            | 8519   | 8519   | 9658   | 2       |
+| encryptedGroupKey                                    | 3350            | 3469   | 3529   | 3529   | 6       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| groupCount                                           | 2383            | 2383   | 2383   | 2383   | 2       |
+| friendRegistry                                       | 2457            | 2457   | 2457   | 2457   | 2       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| groups                                               | 6863            | 6863   | 6863   | 6863   | 6       |
+| getGroupCreator                                      | 2536            | 2536   | 2536   | 2536   | 1       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| initialize                                           | 2934            | 69376  | 70922  | 70922  | 44      |
+| getMembers                                           | 7382            | 7382   | 7382   | 7382   | 1       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| inviteMember                                         | 2915            | 60131  | 67164  | 67164  | 38      |
+| groupCount                                           | 2361            | 2361   | 2361   | 2361   | 3       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| isInvited                                            | 2638            | 2638   | 2638   | 2638   | 2       |
+| groups                                               | 6863            | 6863   | 6863   | 6863   | 9       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| isMember                                             | 2637            | 2637   | 2637   | 2637   | 34      |
+| initialize                                           | 2978            | 70202  | 70966  | 70966  | 89      |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| leaveGroup                                           | 2604            | 15268  | 19892  | 19892  | 7       |
+| inviteMember                                         | 2915            | 62496  | 67186  | 67186  | 57      |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| owner                                                | 2397            | 2397   | 2397   | 2397   | 1       |
+| inviteMemberFor                                      | 2882            | 21731  | 20135  | 69440  | 7       |
+|------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| isInvited                                            | 2671            | 2671   | 2671   | 2671   | 5       |
+|------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| isMember                                             | 2758            | 2758   | 2758   | 2758   | 53      |
+|------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| leaveGroup                                           | 2659            | 16341  | 19936  | 19936  | 9       |
+|------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| leaveGroupFor                                        | 2590            | 9226   | 6029   | 22258  | 4       |
+|------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| owner                                                | 2364            | 2364   | 2364   | 2364   | 1       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
 | proxiableUUID                                        | 326             | 326    | 326    | 326    | 1       |
 |------------------------------------------------------+-----------------+--------+--------+--------+---------|
-| upgradeToAndCall                                     | 3248            | 7131   | 7131   | 11014  | 2       |
+| setBackend                                           | 2624            | 23897  | 24732  | 24732  | 47      |
+|------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| upgradeToAndCall                                     | 3292            | 7175   | 7175   | 11058  | 2       |
 ╰------------------------------------------------------+-----------------+--------+--------+--------+---------╯
+
+╭--------------------------------------------------------------+-----------------+--------+--------+--------+---------╮
+| src/khaaliSplitReputation.sol:khaaliSplitReputation Contract |                 |        |        |        |         |
++=====================================================================================================================+
+| Deployment Cost                                              | Deployment Size |        |        |        |         |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| 1145112                                                      | 5179            |        |        |        |         |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                                              |                 |        |        |        |         |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                                                | Min             | Avg    | Median | Max    | # Calls |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| DEFAULT_SCORE                                                | 238             | 238    | 238    | 238    | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| FAILURE_DELTA                                                | 261             | 261    | 261    | 261    | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| MAX_SCORE                                                    | 262             | 262    | 262    | 262    | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| MIN_SCORE                                                    | 305             | 305    | 305    | 305    | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| SUCCESS_DELTA                                                | 282             | 282    | 282    | 282    | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| backend                                                      | 2348            | 2348   | 2348   | 2348   | 4       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| getReputation                                                | 802             | 2873   | 2623   | 4802   | 36      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| initialize                                                   | 3194            | 109993 | 115540 | 115540 | 84      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| owner                                                        | 2342            | 2342   | 2342   | 2342   | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| proxiableUUID                                                | 348             | 348    | 348    | 348    | 2       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| recordSettlement                                             | 2673            | 102592 | 101431 | 173213 | 356     |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| scores                                                       | 2627            | 2627   | 2627   | 2627   | 29      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setBackend                                                   | 2580            | 5672   | 5676   | 8758   | 4       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setSettlementContract                                        | 2648            | 10984  | 8794   | 25894  | 5       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setSubnameRegistry                                           | 2647            | 6744   | 8793   | 8793   | 3       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setUserNode                                                  | 2546            | 24327  | 26277  | 26277  | 73      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| settlementContract                                           | 2391            | 2391   | 2391   | 2391   | 6       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| subnameRegistry                                              | 2458            | 2458   | 2458   | 2458   | 6       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| upgradeToAndCall                                             | 3181            | 8373   | 10969  | 10969  | 3       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| userNodes                                                    | 2627            | 2627   | 2627   | 2627   | 5       |
+╰--------------------------------------------------------------+-----------------+--------+--------+--------+---------╯
 
 ╭----------------------------------------------------------+-----------------+--------+--------+--------+---------╮
 | src/khaaliSplitResolver.sol:khaaliSplitResolver Contract |                 |        |        |        |         |
@@ -158,50 +620,249 @@ Solc 0.8.28 | Cancun EVM | Optimizer 200 runs
 | url                                                      | 7406            | 7406   | 7406   | 7406   | 2       |
 ╰----------------------------------------------------------+-----------------+--------+--------+--------+---------╯
 
-╭--------------------------------------------------------------+-----------------+-------+--------+-------+---------╮
-| src/khaaliSplitSettlement.sol:khaaliSplitSettlement Contract |                 |       |        |       |         |
-+===================================================================================================================+
-| Deployment Cost                                              | Deployment Size |       |        |       |         |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| 1025992                                                      | 4628            |       |        |       |         |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-|                                                              |                 |       |        |       |         |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| Function Name                                                | Min             | Avg   | Median | Max   | # Calls |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| addToken                                                     | 2580            | 25090 | 25909  | 25909 | 57      |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| allowedTokens                                                | 2597            | 2597  | 2597   | 2597  | 4       |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| initialize                                                   | 2832            | 47186 | 48665  | 48665 | 31      |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| owner                                                        | 2323            | 2323  | 2323   | 2323  | 2       |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| proxiableUUID                                                | 359             | 359   | 359    | 359   | 1       |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| removeToken                                                  | 2647            | 5741  | 5741   | 8835  | 2       |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| settle                                                       | 743             | 24029 | 26708  | 44932 | 8       |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| settleWithPermit                                             | 993             | 37893 | 3288   | 92078 | 5       |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| upgradeToAndCall                                             | 3203            | 7102  | 7102   | 11002 | 2       |
-|--------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| withdraw                                                     | 2726            | 13661 | 2741   | 35518 | 3       |
-╰--------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+╭--------------------------------------------------------------+-----------------+--------+--------+--------+---------╮
+| src/khaaliSplitSettlement.sol:khaaliSplitSettlement Contract |                 |        |        |        |         |
++=====================================================================================================================+
+| Deployment Cost                                              | Deployment Size |        |        |        |         |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| 2048750                                                      | 9357            |        |        |        |         |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                                              |                 |        |        |        |         |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                                                | Min             | Avg    | Median | Max    | # Calls |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| REPUTATION_NOT_SET                                           | 240             | 240    | 240    | 240    | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| addToken                                                     | 2597            | 25401  | 25926  | 25926  | 89      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| allowedTokens                                                | 2581            | 2581   | 2581   | 2581   | 5       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| chainIdToDomain                                              | 2495            | 2495   | 2495   | 2495   | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| configureDomain                                              | 2653            | 38205  | 28522  | 48422  | 172     |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| domainConfigured                                             | 2460            | 2460   | 2460   | 2460   | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| gatewayMinter                                                | 2382            | 2382   | 2382   | 2382   | 3       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| gatewayWallet                                                | 2404            | 2404   | 2404   | 2404   | 4       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| initialize                                                   | 2894            | 47718  | 48762  | 48762  | 92      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| owner                                                        | 2441            | 2441   | 2441   | 2441   | 4       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| proxiableUUID                                                | 349             | 349    | 349    | 349    | 2       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| removeToken                                                  | 2620            | 5714   | 5714   | 8808   | 2       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| reputationContract                                           | 2403            | 2403   | 2403   | 2403   | 4       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setGatewayMinter                                             | 2662            | 25070  | 25908  | 25908  | 89      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setGatewayWallet                                             | 2597            | 25005  | 25843  | 25843  | 89      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setReputationContract                                        | 2642            | 24692  | 25888  | 25888  | 91      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setSubnameRegistry                                           | 2641            | 25423  | 25887  | 25887  | 87      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setTokenMessenger                                            | 2640            | 25048  | 25886  | 25886  | 89      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| settle                                                       | 605             | 605    | 605    | 605    | 1       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| settleFromGateway                                            | 1234            | 266485 | 388796 | 462605 | 16      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| settleWithAuthorization                                      | 928             | 276428 | 369895 | 406303 | 41      |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| subnameRegistry                                              | 2425            | 2425   | 2425   | 2425   | 3       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| tokenMessenger                                               | 2426            | 2426   | 2426   | 2426   | 4       |
+|--------------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| upgradeToAndCall                                             | 3394            | 8586   | 11183  | 11183  | 3       |
+╰--------------------------------------------------------------+-----------------+--------+--------+--------+---------╯
 
-╭--------------------------------------------+-----------------+-----------+--------+------------+---------╮
-| src/kdioDeployer.sol:kdioDeployer Contract |                 |           |        |            |         |
+╭----------------------------------------------------------+-----------------+--------+--------+--------+---------╮
+| src/khaaliSplitSubnames.sol:khaaliSplitSubnames Contract |                 |        |        |        |         |
++=================================================================================================================+
+| Deployment Cost                                          | Deployment Size |        |        |        |         |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| 1451593                                                  | 6596            |        |        |        |         |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+|                                                          |                 |        |        |        |         |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| Function Name                                            | Min             | Avg    | Median | Max    | # Calls |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| addr                                                     | 2586            | 2586   | 2586   | 2586   | 29      |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| backend                                                  | 2382            | 2382   | 2382   | 2382   | 3       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| initialize                                               | 3092            | 108541 | 115474 | 115474 | 69      |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| nameWrapper                                              | 2446            | 2446   | 2446   | 2446   | 1       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| owner                                                    | 2375            | 2375   | 2375   | 2375   | 1       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| parentNode                                               | 2404            | 2404   | 2404   | 2404   | 3       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| proxiableUUID                                            | 348             | 348    | 348    | 348    | 2       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| register                                                 | 2825            | 182009 | 240785 | 240785 | 60      |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| reputationContract                                       | 2359            | 2359   | 2359   | 2359   | 3       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setAddr                                                  | 9174            | 14430  | 12544  | 19082  | 5       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setBackend                                               | 2618            | 5712   | 5716   | 8799   | 4       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setReputationContract                                    | 2619            | 24031  | 25865  | 25865  | 22      |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| setText                                                  | 12846           | 32898  | 28880  | 83433  | 71      |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| subnameNode                                              | 3021            | 3021   | 3021   | 3021   | 8       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| supportsInterface                                        | 426             | 473    | 483    | 502    | 4       |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| text                                                     | 3554            | 4526   | 3733   | 7952   | 74      |
+|----------------------------------------------------------+-----------------+--------+--------+--------+---------|
+| upgradeToAndCall                                         | 3211            | 8403   | 10999  | 10999  | 3       |
+╰----------------------------------------------------------+-----------------+--------+--------+--------+---------╯
+
+╭---------------------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/helpers/MockGatewayMinter.sol:MockGatewayMinter Contract |                 |       |        |       |         |
++====================================================================================================================+
+| Deployment Cost                                               | Deployment Size |       |        |       |         |
+|---------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 486531                                                        | 1999            |       |        |       |         |
+|---------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                               |                 |       |        |       |         |
+|---------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                                 | Min             | Avg   | Median | Max   | # Calls |
+|---------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| callCount                                                     | 2292            | 2292  | 2292   | 2292  | 3       |
+|---------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| setMintAmount                                                 | 23638           | 25044 | 25044  | 26450 | 2       |
+|---------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| setShouldMintZero                                             | 43599           | 43599 | 43599  | 43599 | 1       |
+|---------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| setShouldRevert                                               | 43651           | 43651 | 43651  | 43651 | 1       |
+╰---------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭---------------------------------------------------------------+-----------------+------+--------+------+---------╮
+| test/helpers/MockGatewayWallet.sol:MockGatewayWallet Contract |                 |      |        |      |         |
++==================================================================================================================+
+| Deployment Cost                                               | Deployment Size |      |        |      |         |
+|---------------------------------------------------------------+-----------------+------+--------+------+---------|
+| 350342                                                        | 1402            |      |        |      |         |
+|---------------------------------------------------------------+-----------------+------+--------+------+---------|
+|                                                               |                 |      |        |      |         |
+|---------------------------------------------------------------+-----------------+------+--------+------+---------|
+| Function Name                                                 | Min             | Avg  | Median | Max  | # Calls |
+|---------------------------------------------------------------+-----------------+------+--------+------+---------|
+| callCount                                                     | 2302            | 2302 | 2302   | 2302 | 14      |
+|---------------------------------------------------------------+-----------------+------+--------+------+---------|
+| getCall                                                       | 9097            | 9097 | 9097   | 9097 | 8       |
+╰---------------------------------------------------------------+-----------------+------+--------+------+---------╯
+
+╭-----------------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/helpers/MockNameWrapper.sol:MockNameWrapper Contract |                 |       |        |       |         |
++================================================================================================================+
+| Deployment Cost                                           | Deployment Size |       |        |       |         |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 457021                                                    | 1895            |       |        |       |         |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                           |                 |       |        |       |         |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                             | Min             | Avg   | Median | Max   | # Calls |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| lastRecord                                                | 11921           | 11921 | 11921  | 11921 | 2       |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| ownerOf                                                   | 2510            | 2510  | 2510   | 2510  | 79      |
+|-----------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| registerCount                                             | 2360            | 2360  | 2360   | 2360  | 2       |
+╰-----------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭-----------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/helpers/MockSubnames.sol:MockSubnames Contract |                 |       |        |       |         |
 +==========================================================================================================+
-| Deployment Cost                            | Deployment Size |           |        |            |         |
-|--------------------------------------------+-----------------+-----------+--------+------------+---------|
-| 425804                                     | 1751            |           |        |            |         |
-|--------------------------------------------+-----------------+-----------+--------+------------+---------|
-|                                            |                 |           |        |            |         |
-|--------------------------------------------+-----------------+-----------+--------+------------+---------|
-| Function Name                              | Min             | Avg       | Median | Max        | # Calls |
-|--------------------------------------------+-----------------+-----------+--------+------------+---------|
-| computeAddress                             | 2227            | 2227      | 2227   | 2227       | 6       |
-|--------------------------------------------+-----------------+-----------+--------+------------+---------|
-| deploy                                     | 106092          | 104054557 | 178518 | 1039011416 | 10      |
-╰--------------------------------------------+-----------------+-----------+--------+------------+---------╯
+| Deployment Cost                                     | Deployment Size |       |        |       |         |
+|-----------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 600871                                              | 2561            |       |        |       |         |
+|-----------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                     |                 |       |        |       |         |
+|-----------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                       | Min             | Avg   | Median | Max   | # Calls |
+|-----------------------------------------------------+-----------------+-------+--------+-------+---------|
+| getSetTextCall                                      | 10527           | 10527 | 10527  | 10527 | 8       |
+|-----------------------------------------------------+-----------------+-------+--------+-------+---------|
+| setTextCallCount                                    | 2344            | 2344  | 2344   | 2344  | 6       |
+╰-----------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭---------------------------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/helpers/MockTokenMessengerV2.sol:MockTokenMessengerV2 Contract |                 |       |        |       |         |
++==========================================================================================================================+
+| Deployment Cost                                                     | Deployment Size |       |        |       |         |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 368919                                                              | 1488            |       |        |       |         |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                                     |                 |       |        |       |         |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                                       | Min             | Avg   | Median | Max   | # Calls |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| callCount                                                           | 2278            | 2278  | 2278   | 2278  | 7       |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| getCall                                                             | 11257           | 11257 | 11257  | 11257 | 6       |
+╰---------------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭---------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/helpers/MockUSDC.sol:MockUSDC Contract |                 |       |        |       |         |
++==================================================================================================+
+| Deployment Cost                             | Deployment Size |       |        |       |         |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| 1126287                                     | 5670            |       |        |       |         |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                             |                 |       |        |       |         |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                               | Min             | Avg   | Median | Max   | # Calls |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| balanceOf                                   | 560             | 1931  | 2560   | 2560  | 35      |
+|---------------------------------------------+-----------------+-------+--------+-------+---------|
+| mint                                        | 68480           | 68480 | 68480  | 68480 | 77      |
+╰---------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+╭-----------------------------------------------------------------------+-----------------+------+--------+------+---------╮
+| test/khaaliSplitSettlement.t.sol:MockReputationForSettlement Contract |                 |      |        |      |         |
++==========================================================================================================================+
+| Deployment Cost                                                       | Deployment Size |      |        |      |         |
+|-----------------------------------------------------------------------+-----------------+------+--------+------+---------|
+| 315273                                                                | 1240            |      |        |      |         |
+|-----------------------------------------------------------------------+-----------------+------+--------+------+---------|
+|                                                                       |                 |      |        |      |         |
+|-----------------------------------------------------------------------+-----------------+------+--------+------+---------|
+| Function Name                                                         | Min             | Avg  | Median | Max  | # Calls |
+|-----------------------------------------------------------------------+-----------------+------+--------+------+---------|
+| getReputation                                                         | 749             | 1341 | 749    | 4749 | 27      |
+|-----------------------------------------------------------------------+-----------------+------+--------+------+---------|
+| recordCallCount                                                       | 2270            | 2270 | 2270   | 2270 | 3       |
+╰-----------------------------------------------------------------------+-----------------+------+--------+------+---------╯
+
+╭---------------------------------------------------------------------+-----------------+-------+--------+-------+---------╮
+| test/khaaliSplitSettlement.t.sol:MockSubnamesForSettlement Contract |                 |       |        |       |         |
++==========================================================================================================================+
+| Deployment Cost                                                     | Deployment Size |       |        |       |         |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| 329846                                                              | 1307            |       |        |       |         |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+|                                                                     |                 |       |        |       |         |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| Function Name                                                       | Min             | Avg   | Median | Max   | # Calls |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| addr                                                                | 2463            | 2463  | 2463   | 2463  | 34      |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| setAddr                                                             | 44515           | 44515 | 44515  | 44515 | 79      |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| setTextRecord                                                       | 26156           | 60625 | 46294  | 91236 | 247     |
+|---------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| text                                                                | 3484            | 5735  | 3663   | 7882  | 71      |
+╰---------------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
+
+
+Ran 9 test suites in 72.77ms (193.77ms CPU time): 331 tests passed, 0 failed, 0 skipped (331 total tests)
