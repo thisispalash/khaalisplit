@@ -49,6 +49,10 @@ contract khaaliSplitGroupsTest is Test {
             abi.encodeCall(khaaliSplitGroups.initialize, (address(friends), owner))
         );
         groupsContract = khaaliSplitGroups(address(groupsProxy));
+
+        // Set backend on Groups
+        vm.prank(owner);
+        groupsContract.setBackend(backend);
     }
 
     // ──────────────────────────────────────────────
@@ -288,6 +292,261 @@ contract khaaliSplitGroupsTest is Test {
         assertTrue(groupsContract.isMember(groupId, bob));
         (, , uint256 memberCount) = groupsContract.groups(groupId);
         assertEq(memberCount, 2);
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: createGroupFor
+    // ══════════════════════════════════════════════
+
+    function test_createGroupFor_success() public {
+        vm.prank(backend);
+        vm.expectEmit(true, true, false, true);
+        emit khaaliSplitGroups.GroupCreated(1, alice, nameHash);
+        uint256 gId = groupsContract.createGroupFor(alice, nameHash, encryptedKeyAlice);
+
+        assertEq(gId, 1);
+        assertEq(groupsContract.groupCount(), 1);
+        assertTrue(groupsContract.isMember(gId, alice));
+        assertEq(groupsContract.encryptedGroupKey(gId, alice), encryptedKeyAlice);
+
+        (bytes32 storedNameHash, address creator, uint256 memberCount) = groupsContract.groups(gId);
+        assertEq(storedNameHash, nameHash);
+        assertEq(creator, alice);
+        assertEq(memberCount, 1);
+    }
+
+    function test_createGroupFor_notBackend_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitGroups.NotBackend.selector);
+        groupsContract.createGroupFor(alice, nameHash, encryptedKeyAlice);
+    }
+
+    function test_createGroupFor_notRegistered_reverts() public {
+        address stranger = makeAddr("stranger");
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.NotRegistered.selector, stranger)
+        );
+        groupsContract.createGroupFor(stranger, nameHash, hex"00");
+    }
+
+    function test_createGroupFor_originalStillWorks() public {
+        vm.prank(alice);
+        uint256 gId = groupsContract.createGroup(nameHash, encryptedKeyAlice);
+        assertEq(gId, 1);
+        assertTrue(groupsContract.isMember(gId, alice));
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: inviteMemberFor
+    // ══════════════════════════════════════════════
+
+    function test_inviteMemberFor_success() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(backend);
+        vm.expectEmit(true, true, true, false);
+        emit khaaliSplitGroups.MemberInvited(gId, alice, bob);
+        groupsContract.inviteMemberFor(alice, gId, bob, encryptedKeyBob);
+
+        assertTrue(groupsContract.isInvited(gId, bob));
+        assertEq(groupsContract.encryptedGroupKey(gId, bob), encryptedKeyBob);
+    }
+
+    function test_inviteMemberFor_notBackend_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitGroups.NotBackend.selector);
+        groupsContract.inviteMemberFor(alice, gId, bob, encryptedKeyBob);
+    }
+
+    function test_inviteMemberFor_groupDoesNotExist_reverts() public {
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.GroupDoesNotExist.selector, 999)
+        );
+        groupsContract.inviteMemberFor(alice, 999, bob, encryptedKeyBob);
+    }
+
+    function test_inviteMemberFor_notGroupMember_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.NotGroupMember.selector, gId, bob)
+        );
+        groupsContract.inviteMemberFor(bob, gId, alice, hex"00");
+    }
+
+    function test_inviteMemberFor_notFriends_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.NotFriends.selector, alice, charlie)
+        );
+        groupsContract.inviteMemberFor(alice, gId, charlie, encryptedKeyCharlie);
+    }
+
+    function test_inviteMemberFor_alreadyMember_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+        _addBobToGroup(gId);
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.AlreadyMember.selector, gId, bob)
+        );
+        groupsContract.inviteMemberFor(alice, gId, bob, encryptedKeyBob);
+    }
+
+    function test_inviteMemberFor_alreadyInvited_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(alice);
+        groupsContract.inviteMember(gId, bob, encryptedKeyBob);
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.AlreadyInvited.selector, gId, bob)
+        );
+        groupsContract.inviteMemberFor(alice, gId, bob, encryptedKeyBob);
+    }
+
+    function test_inviteMemberFor_originalStillWorks() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(alice);
+        groupsContract.inviteMember(gId, bob, encryptedKeyBob);
+        assertTrue(groupsContract.isInvited(gId, bob));
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: acceptGroupInviteFor
+    // ══════════════════════════════════════════════
+
+    function test_acceptGroupInviteFor_success() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(alice);
+        groupsContract.inviteMember(gId, bob, encryptedKeyBob);
+
+        vm.prank(backend);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitGroups.MemberAccepted(gId, bob);
+        groupsContract.acceptGroupInviteFor(bob, gId);
+
+        assertTrue(groupsContract.isMember(gId, bob));
+        assertFalse(groupsContract.isInvited(gId, bob));
+
+        (, , uint256 memberCount) = groupsContract.groups(gId);
+        assertEq(memberCount, 2);
+    }
+
+    function test_acceptGroupInviteFor_notBackend_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(alice);
+        groupsContract.inviteMember(gId, bob, encryptedKeyBob);
+
+        vm.prank(bob);
+        vm.expectRevert(khaaliSplitGroups.NotBackend.selector);
+        groupsContract.acceptGroupInviteFor(bob, gId);
+    }
+
+    function test_acceptGroupInviteFor_notInvited_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.NotInvited.selector, gId, bob)
+        );
+        groupsContract.acceptGroupInviteFor(bob, gId);
+    }
+
+    function test_acceptGroupInviteFor_originalStillWorks() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(alice);
+        groupsContract.inviteMember(gId, bob, encryptedKeyBob);
+
+        vm.prank(bob);
+        groupsContract.acceptGroupInvite(gId);
+        assertTrue(groupsContract.isMember(gId, bob));
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: leaveGroupFor
+    // ══════════════════════════════════════════════
+
+    function test_leaveGroupFor_success() public {
+        uint256 gId = _createGroupAsAlice();
+        _addBobToGroup(gId);
+
+        vm.prank(backend);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitGroups.MemberLeft(gId, bob);
+        groupsContract.leaveGroupFor(bob, gId);
+
+        assertFalse(groupsContract.isMember(gId, bob));
+        (, , uint256 memberCount) = groupsContract.groups(gId);
+        assertEq(memberCount, 1);
+        assertEq(groupsContract.encryptedGroupKey(gId, bob), "");
+    }
+
+    function test_leaveGroupFor_notBackend_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+        _addBobToGroup(gId);
+
+        vm.prank(bob);
+        vm.expectRevert(khaaliSplitGroups.NotBackend.selector);
+        groupsContract.leaveGroupFor(bob, gId);
+    }
+
+    function test_leaveGroupFor_notMember_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.NotGroupMember.selector, gId, bob)
+        );
+        groupsContract.leaveGroupFor(bob, gId);
+    }
+
+    function test_leaveGroupFor_creatorCannotLeave_reverts() public {
+        uint256 gId = _createGroupAsAlice();
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitGroups.CreatorCannotLeave.selector, gId)
+        );
+        groupsContract.leaveGroupFor(alice, gId);
+    }
+
+    function test_leaveGroupFor_originalStillWorks() public {
+        uint256 gId = _createGroupAsAlice();
+        _addBobToGroup(gId);
+
+        vm.prank(bob);
+        groupsContract.leaveGroup(gId);
+        assertFalse(groupsContract.isMember(gId, bob));
+    }
+
+    // ══════════════════════════════════════════════
+    //  Admin (Groups)
+    // ══════════════════════════════════════════════
+
+    function test_setBackend_success() public {
+        address newBackend = makeAddr("newBackend");
+        vm.prank(owner);
+        groupsContract.setBackend(newBackend);
+        assertEq(groupsContract.backend(), newBackend);
+    }
+
+    function test_setBackend_notOwner_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        groupsContract.setBackend(alice);
     }
 
     // ──────────────────────────────────────────────

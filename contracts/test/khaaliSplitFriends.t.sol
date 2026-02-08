@@ -341,6 +341,207 @@ contract khaaliSplitFriendsTest is Test {
         assertEq(bobFriends[0], alice);
     }
 
+    // ══════════════════════════════════════════════
+    //  Backend relay: requestFriendFor
+    // ══════════════════════════════════════════════
+
+    function test_requestFriendFor_success() public {
+        _registerAliceAndBob();
+
+        vm.prank(backend);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendRequested(alice, bob);
+        friends.requestFriendFor(alice, bob);
+
+        assertTrue(friends.pendingRequest(alice, bob));
+    }
+
+    function test_requestFriendFor_notBackend_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.NotBackend.selector);
+        friends.requestFriendFor(alice, bob);
+    }
+
+    function test_requestFriendFor_notRegistered_user_reverts() public {
+        vm.prank(backend);
+        friends.registerPubKey(bob, bobPubKey);
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitFriends.NotRegistered.selector, alice)
+        );
+        friends.requestFriendFor(alice, bob);
+    }
+
+    function test_requestFriendFor_notRegistered_friend_reverts() public {
+        vm.prank(backend);
+        friends.registerPubKey(alice, alicePubKey);
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitFriends.NotRegistered.selector, bob)
+        );
+        friends.requestFriendFor(alice, bob);
+    }
+
+    function test_requestFriendFor_self_reverts() public {
+        vm.prank(backend);
+        friends.registerPubKey(alice, alicePubKey);
+
+        vm.prank(backend);
+        vm.expectRevert(khaaliSplitFriends.CannotFriendSelf.selector);
+        friends.requestFriendFor(alice, alice);
+    }
+
+    function test_requestFriendFor_alreadyFriends_reverts() public {
+        _registerAliceAndBob();
+
+        vm.startPrank(backend);
+        friends.requestFriendFor(alice, bob);
+        friends.acceptFriendFor(bob, alice);
+        vm.stopPrank();
+
+        vm.prank(backend);
+        vm.expectRevert(khaaliSplitFriends.AlreadyFriends.selector);
+        friends.requestFriendFor(alice, bob);
+    }
+
+    function test_requestFriendFor_alreadyRequested_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(backend);
+        friends.requestFriendFor(alice, bob);
+
+        vm.prank(backend);
+        vm.expectRevert(khaaliSplitFriends.AlreadyRequested.selector);
+        friends.requestFriendFor(alice, bob);
+    }
+
+    function test_requestFriendFor_mutualRequest_autoAccepts() public {
+        _registerAliceAndBob();
+
+        vm.startPrank(backend);
+        friends.requestFriendFor(bob, alice);
+        assertTrue(friends.pendingRequest(bob, alice));
+
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendAccepted(alice, bob);
+        friends.requestFriendFor(alice, bob);
+        vm.stopPrank();
+
+        assertTrue(friends.isFriend(alice, bob));
+        assertTrue(friends.isFriend(bob, alice));
+        assertFalse(friends.pendingRequest(bob, alice));
+        assertFalse(friends.pendingRequest(alice, bob));
+        assertEq(friends.getFriends(alice).length, 1);
+        assertEq(friends.getFriends(bob).length, 1);
+    }
+
+    function test_requestFriendFor_originalStillWorks() public {
+        _registerAliceAndBob();
+
+        // User calls directly — should still work
+        vm.prank(alice);
+        friends.requestFriend(bob);
+        assertTrue(friends.pendingRequest(alice, bob));
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: acceptFriendFor
+    // ══════════════════════════════════════════════
+
+    function test_acceptFriendFor_success() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        friends.requestFriend(bob);
+
+        vm.prank(backend);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendAccepted(bob, alice);
+        friends.acceptFriendFor(bob, alice);
+
+        assertTrue(friends.isFriend(alice, bob));
+        assertTrue(friends.isFriend(bob, alice));
+        assertFalse(friends.pendingRequest(alice, bob));
+        assertEq(friends.getFriends(alice).length, 1);
+        assertEq(friends.getFriends(bob).length, 1);
+    }
+
+    function test_acceptFriendFor_notBackend_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        friends.requestFriend(bob);
+
+        vm.prank(bob);
+        vm.expectRevert(khaaliSplitFriends.NotBackend.selector);
+        friends.acceptFriendFor(bob, alice);
+    }
+
+    function test_acceptFriendFor_noPending_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(backend);
+        vm.expectRevert(khaaliSplitFriends.NoPendingRequest.selector);
+        friends.acceptFriendFor(bob, alice);
+    }
+
+    function test_acceptFriendFor_originalStillWorks() public {
+        _registerAliceAndBob();
+
+        vm.prank(alice);
+        friends.requestFriend(bob);
+
+        // User calls directly — should still work
+        vm.prank(bob);
+        friends.acceptFriend(alice);
+        assertTrue(friends.isFriend(alice, bob));
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: removeFriendFor
+    // ══════════════════════════════════════════════
+
+    function test_removeFriendFor_success() public {
+        _makeFriends();
+
+        vm.prank(backend);
+        vm.expectEmit(true, true, false, false);
+        emit khaaliSplitFriends.FriendRemoved(alice, bob);
+        friends.removeFriendFor(alice, bob);
+
+        assertFalse(friends.isFriend(alice, bob));
+        assertFalse(friends.isFriend(bob, alice));
+    }
+
+    function test_removeFriendFor_notBackend_reverts() public {
+        _makeFriends();
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitFriends.NotBackend.selector);
+        friends.removeFriendFor(alice, bob);
+    }
+
+    function test_removeFriendFor_notFriends_reverts() public {
+        _registerAliceAndBob();
+
+        vm.prank(backend);
+        vm.expectRevert(khaaliSplitFriends.NotFriends.selector);
+        friends.removeFriendFor(alice, bob);
+    }
+
+    function test_removeFriendFor_originalStillWorks() public {
+        _makeFriends();
+
+        // User calls directly — should still work
+        vm.prank(alice);
+        friends.removeFriend(bob);
+        assertFalse(friends.isFriend(alice, bob));
+    }
+
     // ──────────────────────────────────────────────
     //  Admin
     // ──────────────────────────────────────────────
