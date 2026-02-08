@@ -106,6 +106,15 @@ contract DeploySettlement is Script {
             console.log("Set GatewayWallet:", gatewayWalletAddr);
         }
 
+        address gatewayMinterAddr = vm.parseJsonAddress(
+            cctpJson,
+            string.concat(".gatewayMinter.", networkType)
+        );
+        if (gatewayMinterAddr != address(0)) {
+            proxy.setGatewayMinter(gatewayMinterAddr);
+            console.log("Set GatewayMinter:", gatewayMinterAddr);
+        }
+
         // ── CCTP domains ──
         _configureDomains(proxy, cctpJson);
     }
