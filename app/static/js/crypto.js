@@ -154,11 +154,34 @@
     },
 
     /**
-     * Encrypt a group key for a specific member using their public key.
-     * Uses ECDH to derive a shared secret, then encrypts the group key
-     * with AES-256-GCM using the derived key.
-     * @param {string} memberPubKeyHex — member's uncompressed public key (hex)
-     * @param {string} groupKeyHex — the group symmetric key to encrypt
+     * Compute ECDH shared secret using ethers.js SigningKey.
+     * Both parties derive the same shared secret from their private key
+     * and the other's public key.
+     *
+     * @param {string} myPrivKeyHex — our private key (from signing a deterministic message)
+     * @param {string} theirPubKeyHex — their uncompressed public key (hex, no 0x prefix)
+     * @returns {Uint8Array} — 32-byte shared secret
+     */
+    computeSharedSecret(myPrivKeyHex, theirPubKeyHex) {
+      if (!window.ethers) {
+        throw new Error('ethers.js required for ECDH');
+      }
+      const signingKey = new window.ethers.SigningKey('0x' + myPrivKeyHex);
+      // computeSharedSecret expects the full uncompressed pubkey with 0x04 prefix
+      const pubKeyWithPrefix = theirPubKeyHex.startsWith('04')
+        ? '0x' + theirPubKeyHex
+        : '0x04' + theirPubKeyHex;
+      const sharedHex = signingKey.computeSharedSecret(pubKeyWithPrefix);
+      return window.ethers.getBytes(sharedHex);
+    },
+
+    /**
+     * Encrypt a group key for a specific member using ECDH.
+     * Uses a deterministic signing key derived from the wallet signature
+     * and the member's registered public key.
+     *
+     * @param {string} memberPubKeyHex — member's uncompressed public key (hex, no 0x)
+     * @param {string} groupKeyHex — the group symmetric key to encrypt (hex)
      * @returns {Promise<string>} — encrypted group key (hex)
      */
     async encryptGroupKeyForMember(memberPubKeyHex, groupKeyHex) {
@@ -166,39 +189,36 @@
         throw new Error('ethers.js required for ECDH');
       }
 
-      // Get our private key from connected wallet (via signing)
-      const provider = new window.ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      // Sign a deterministic message to derive a consistent private key for ECDH
+      const ecdhMsg = 'khaaliSplit ECDH key exchange v1';
+      const sig = await window.signMessage(ecdhMsg);
+      if (!sig) throw new Error('Failed to sign ECDH message');
 
-      // We use a deterministic "key exchange message" that both sides know
-      const msg = 'khaaliSplit key exchange';
-      const sig = await signer.signMessage(msg);
+      // Use the first 32 bytes of the signature hash as our ECDH private key
+      const privKey = window.ethers.keccak256(window.ethers.toUtf8Bytes(sig)).slice(2);
 
-      // Derive shared secret: use our signing key + their pub key
-      // In practice, this would use proper ECDH. For now, derive from
-      // the signature as a seed (simplified for hackathon).
-      const sharedSecret = window.ethers.keccak256(
-        window.ethers.concat([
-          window.ethers.toUtf8Bytes(sig),
-          window.ethers.getBytes('0x' + memberPubKeyHex),
-        ])
+      // Compute ECDH shared secret
+      const sharedSecret = this.computeSharedSecret(privKey, memberPubKeyHex);
+
+      // Derive AES key from shared secret via HKDF
+      const baseKey = await crypto.subtle.importKey(
+        'raw', sharedSecret, 'HKDF', false, ['deriveKey']
       );
-
-      // Use shared secret to encrypt group key
-      const sharedKeyBytes = window.ethers.getBytes(sharedSecret);
-      const importedKey = await crypto.subtle.importKey(
-        'raw',
-        sharedKeyBytes,
+      const encoder = new TextEncoder();
+      const derivedKey = await crypto.subtle.deriveKey(
+        { name: 'HKDF', hash: 'SHA-256', salt: encoder.encode('khaaliSplit-ecdh'), info: encoder.encode('group-key-wrap') },
+        baseKey,
         { name: 'AES-GCM', length: 256 },
         false,
         ['encrypt']
       );
 
+      // Encrypt the group key
       const groupKeyBytes = hexToBuf(groupKeyHex);
       const iv = crypto.getRandomValues(new Uint8Array(12));
       const encrypted = await crypto.subtle.encrypt(
         { name: 'AES-GCM', iv, tagLength: 128 },
-        importedKey,
+        derivedKey,
         groupKeyBytes
       );
 
@@ -207,6 +227,70 @@
       combined.set(new Uint8Array(encrypted), iv.length);
 
       return bufToHex(combined);
+    },
+
+    /**
+     * Decrypt a group key that was encrypted for us via ECDH.
+     * Mirror of encryptGroupKeyForMember.
+     *
+     * @param {string} senderPubKeyHex — sender's uncompressed public key (hex, no 0x)
+     * @param {string} encryptedKeyHex — encrypted group key (hex)
+     * @returns {Promise<string>} — decrypted group key (hex)
+     */
+    async decryptGroupKeyFromMember(senderPubKeyHex, encryptedKeyHex) {
+      if (!window.ethers) {
+        throw new Error('ethers.js required for ECDH');
+      }
+
+      const ecdhMsg = 'khaaliSplit ECDH key exchange v1';
+      const sig = await window.signMessage(ecdhMsg);
+      if (!sig) throw new Error('Failed to sign ECDH message');
+
+      const privKey = window.ethers.keccak256(window.ethers.toUtf8Bytes(sig)).slice(2);
+      const sharedSecret = this.computeSharedSecret(privKey, senderPubKeyHex);
+
+      const baseKey = await crypto.subtle.importKey(
+        'raw', sharedSecret, 'HKDF', false, ['deriveKey']
+      );
+      const encoder = new TextEncoder();
+      const derivedKey = await crypto.subtle.deriveKey(
+        { name: 'HKDF', hash: 'SHA-256', salt: encoder.encode('khaaliSplit-ecdh'), info: encoder.encode('group-key-wrap') },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt']
+      );
+
+      const combined = hexToBuf(encryptedKeyHex);
+      const iv = combined.slice(0, 12);
+      const data = combined.slice(12);
+
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv, tagLength: 128 },
+        derivedKey,
+        data
+      );
+
+      return bufToHex(new Uint8Array(decrypted));
+    },
+
+    /**
+     * Get our ECDH public key derived from the wallet signature.
+     * This is different from the wallet address — it's a deterministic
+     * key pair used specifically for ECDH key exchange.
+     * @returns {Promise<string>} — uncompressed public key (hex, no 0x)
+     */
+    async getEcdhPublicKey() {
+      if (!window.ethers) throw new Error('ethers.js required');
+
+      const ecdhMsg = 'khaaliSplit ECDH key exchange v1';
+      const sig = await window.signMessage(ecdhMsg);
+      if (!sig) throw new Error('Failed to sign ECDH message');
+
+      const privKey = window.ethers.keccak256(window.ethers.toUtf8Bytes(sig)).slice(2);
+      const signingKey = new window.ethers.SigningKey('0x' + privKey);
+      // Return uncompressed public key without 0x prefix
+      return signingKey.publicKey.slice(2);
     },
 
     /**

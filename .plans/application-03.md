@@ -1050,3 +1050,89 @@ All preserved unchanged.
 | Wallet linking sets addr + prefs + reputation | ✅ `_set_onchain_wallet_records()` |
 | Existing auth flow unchanged | ✅ imports verified, no signature changes |
 | `manage.py check` | ⚠️ Cannot run locally (Docker-only env) |
+
+### Bug Fix — Wallet Linking (is_primary not sticking) — Completed
+
+**Date:** 2026-02-08
+
+**Root cause:** `update_or_create` in `verify_signature()` recalculated `is_first_address` on every call. When a user re-verified (e.g., page refresh), the existing record already had `is_primary=True`, so `is_first_address` evaluated to `False`, and the `defaults` dict overwrote `is_primary` to `False` on the update path.
+
+**Fix:** Added logic to preserve `is_primary=True` if the existing record already has it. Also normalized address to checksummed format via `Web3.to_checksum_address()` to prevent case mismatch issues. Made burnt/existing checks case-insensitive with `__iexact`.
+
+### Sessions 3-6 — Completed
+
+**Date:** 2026-02-08
+
+#### Session 3: Social Graph (Friends + Groups + Encryption)
+
+1. **Added `*For` relay ABIs** to `web3_utils.py`: `requestFriendFor`, `acceptFriendFor`, `removeFriendFor`, `createGroupFor`, `inviteMemberFor`, `acceptGroupInviteFor`, `leaveGroupFor`, `addExpenseFor`, `updateExpenseFor`.
+
+2. **Updated `friends.py`** — all three operations (`send_request`, `accept`, `remove`) now call `send_tx('friends', '*For', ...)` on-chain via the backend. Non-blocking: if on-chain call fails, the DB update still succeeds.
+
+3. **Updated `groups.py`** — `create`, `invite`, `accept_invite`, `leave` all call their respective `*For` relay functions. Group creation passes `name_hash` bytes and `encrypted_key` bytes.
+
+4. **Updated `expenses.py`** — `add` calls `addExpenseFor` with creator address, group ID, data hash bytes, and encrypted data bytes.
+
+5. **Fixed ECDH in `crypto.js`** — replaced the broken one-directional `encryptGroupKeyForMember` with proper ECDH using `ethers.SigningKey.computeSharedSecret()`. Added `decryptGroupKeyFromMember()` (mirror) and `getEcdhPublicKey()`. Both parties sign a deterministic message to derive a consistent ECDH key pair.
+
+6. **Created `keystore.js`** — IndexedDB key storage with `storeGroupKey()`, `getGroupKey()`, `storeSharedSecret()`, `getSharedSecret()`, `clearAll()`.
+
+7. **Added `keystore.js` to `base.html`** (loaded between crypto.js and wallet.js).
+
+#### Session 4: Expenses + Settlement
+
+1. **Created `POST /api/settle/for-user/` endpoint** — handles both `type=authorization` (ERC-3009) and `type=gateway` (Circle Gateway cross-chain) flows. Backend calls `settleWithAuthorization` or `settleFromGateway` on the settlement contract via `send_tx()`.
+
+2. **Added settlement signing to `wallet.js`** — `signSettlementAuthorization()` (EIP-712 typed data for USDC transferWithAuthorization), `signGatewayBurnIntent()`, and `initiateSettlement()` (full flow: sign → POST to backend → get tx hash).
+
+3. **Fixed `debt_summary.html`** — replaced broken `window.settleWithPermit()` call with `window.initiateSettlement()`. Pay button now connects wallet if needed, signs authorization, and submits via backend.
+
+#### Session 5: Indexer Integration
+
+1. **Created `api/utils/hasura_client.py`** — GraphQL client for Envio/Hasura with `graphql_query()`, `is_available()`, and convenience functions: `get_friend_requests()`, `get_user_groups()`, `get_group_expenses()`, `get_settlements()`, `get_settlement_by_tx()`, `get_subname_records()`. Degrades gracefully if Hasura is unreachable.
+
+2. **Added Hasura settings** to `config/settings.py`: `HASURA_GRAPHQL_URL`, `HASURA_ADMIN_SECRET`.
+
+3. **Updated `ens_gateway.py`** — `_resolve_text()` now tries Hasura first for `com.khaalisplit.payment.*` text records, falls back to local DB.
+
+#### Session 6: Mobile Deep Linking
+
+1. **Added `isMobile()` detection** and `openMetaMaskDeepLink()` to `wallet.js`. Uses `metamask.app.link/dapp/` deep link format.
+
+2. **Updated `connectWallet()`** — on mobile with no injected provider, redirects to MetaMask deep link instead of showing an alert.
+
+3. **Added mobile messaging to `onboarding-wallet.html`** — shows "Open in MetaMask" button with deep link on mobile devices.
+
+#### Files modified (Sessions 3-6)
+
+| Action | File | Notes |
+|---|---|---|
+| Edited | `api/utils/web3_utils.py` | Added 9 relay `*For` ABI entries |
+| Edited | `api/views/auth.py` | Fixed wallet linking bug (is_primary preservation, checksummed address) |
+| Edited | `api/views/friends.py` | Added on-chain relay calls for all 3 operations |
+| Edited | `api/views/groups.py` | Added on-chain relay calls for all 4 operations |
+| Edited | `api/views/expenses.py` | Added on-chain relay call for addExpenseFor |
+| Edited | `api/views/settlement.py` | Added `settle_for_user` endpoint (authorization + gateway) |
+| Edited | `api/urls.py` | Added `/api/settle/for-user/` route |
+| Edited | `static/js/wallet.js` | Added settlement signing, mobile detection, MetaMask deep link |
+| Edited | `static/js/crypto.js` | Fixed ECDH with proper SigningKey.computeSharedSecret |
+| Created | `static/js/keystore.js` | IndexedDB key storage for group keys and shared secrets |
+| Created | `api/utils/hasura_client.py` | GraphQL client for Envio/Hasura indexer |
+| Edited | `config/settings.py` | Added HASURA_GRAPHQL_URL, HASURA_ADMIN_SECRET |
+| Edited | `api/views/ens_gateway.py` | Added Hasura fallback for text record resolution |
+| Edited | `templates/base.html` | Added keystore.js script tag |
+| Edited | `templates/partials/debt_summary.html` | Fixed Pay button to use initiateSettlement |
+| Edited | `templates/pages/onboarding-wallet.html` | Added mobile-specific MetaMask deep link UI |
+
+#### Verification
+
+| Check | Status |
+|---|---|
+| All Python files parse (AST check) | ✅ |
+| New URL route added | ✅ `/api/settle/for-user/` |
+| Settlement signing functions exist in wallet.js | ✅ |
+| ECDH uses ethers.SigningKey.computeSharedSecret | ✅ |
+| Mobile detection + MetaMask deep link added | ✅ |
+| Hasura client degrades gracefully | ✅ (try/except on all queries) |
+| Non-blocking on-chain calls | ✅ (all relay calls in try/except) |
+| `manage.py check` | ⚠️ Cannot run locally (Docker-only env) |

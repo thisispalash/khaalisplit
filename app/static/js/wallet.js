@@ -8,6 +8,29 @@
  */
 
 // ────────────────────────────────────────────────────────
+// Mobile detection
+// ────────────────────────────────────────────────────────
+
+/**
+ * Detect if the user is on a mobile device.
+ * @returns {boolean}
+ */
+window.isMobile = function isMobile() {
+  return /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent)
+    || (navigator.maxTouchPoints > 0 && window.innerWidth < 768);
+};
+
+/**
+ * Open MetaMask deep link on mobile.
+ * Redirects to MetaMask's in-app browser with the current URL.
+ */
+window.openMetaMaskDeepLink = function openMetaMaskDeepLink() {
+  const currentUrl = window.location.href.replace(/^https?:\/\//, '');
+  const deepLink = `https://metamask.app.link/dapp/${currentUrl}`;
+  window.location.href = deepLink;
+};
+
+// ────────────────────────────────────────────────────────
 // State
 // ────────────────────────────────────────────────────────
 
@@ -82,8 +105,14 @@ window.connectWallet = async function connectWallet() {
       return address;
     }
 
-    // TODO: WalletConnect / Web3Modal for mobile PWA
-    console.warn('[wallet] No injected provider found. Mobile support coming soon.');
+    // Mobile: redirect to MetaMask deep link
+    if (window.isMobile()) {
+      console.log('[wallet] Mobile detected, opening MetaMask deep link');
+      window.openMetaMaskDeepLink();
+      return null;
+    }
+
+    console.warn('[wallet] No injected provider found.');
     alert('No wallet found. Please install MetaMask or use a dApp browser.');
     return null;
 
@@ -151,6 +180,172 @@ window.getUsdcAddress = function getUsdcAddress(chainId) {
  */
 window.getSettlementAddress = function getSettlementAddress(chainId) {
   return SETTLEMENT_ADDRESSES[chainId] || null;
+};
+
+// ────────────────────────────────────────────────────────
+// Settlement signing
+// ────────────────────────────────────────────────────────
+
+/**
+ * Sign a ERC-3009 transferWithAuthorization for USDC settlement.
+ * The user signs an EIP-712 typed data message authorizing the
+ * settlement contract to pull USDC from their wallet.
+ *
+ * @param {string} toAddress — recipient address (settlement contract)
+ * @param {string} amount — amount in USDC (human-readable, e.g. "10.5")
+ * @param {number} chainId — chain ID to settle on
+ * @returns {Object|null} — { signature, auth_from, valid_after, valid_before, nonce }
+ */
+window.signSettlementAuthorization = async function signSettlementAuthorization(toAddress, amount, chainId) {
+  if (!signer) {
+    console.error('[wallet] No signer available. Connect wallet first.');
+    return null;
+  }
+  try {
+    const usdcAddress = getUsdcAddress(chainId);
+    const settlementAddress = getSettlementAddress(chainId);
+    if (!usdcAddress || !settlementAddress) {
+      console.error('[wallet] No USDC or settlement address for chain', chainId);
+      return null;
+    }
+
+    const from = await signer.getAddress();
+    const amountWei = ethers.parseUnits(amount, 6); // USDC has 6 decimals
+    const validAfter = 0;
+    const validBefore = Math.floor(Date.now() / 1000) + 3600; // 1 hour
+    const nonce = ethers.hexlify(ethers.randomBytes(32));
+
+    // EIP-712 domain for USDC transferWithAuthorization
+    const domain = {
+      name: 'USD Coin',
+      version: '2',
+      chainId: chainId,
+      verifyingContract: usdcAddress,
+    };
+
+    const types = {
+      TransferWithAuthorization: [
+        { name: 'from', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'value', type: 'uint256' },
+        { name: 'validAfter', type: 'uint256' },
+        { name: 'validBefore', type: 'uint256' },
+        { name: 'nonce', type: 'bytes32' },
+      ],
+    };
+
+    const value = {
+      from: from,
+      to: settlementAddress,
+      value: amountWei,
+      validAfter: validAfter,
+      validBefore: validBefore,
+      nonce: nonce,
+    };
+
+    const signature = await signer.signTypedData(domain, types, value);
+    console.log('[wallet] Signed settlement authorization');
+
+    return {
+      signature,
+      auth_from: from,
+      valid_after: validAfter,
+      valid_before: validBefore,
+      nonce: nonce,
+    };
+  } catch (err) {
+    console.error('[wallet] Settlement authorization signing failed:', err);
+    return null;
+  }
+};
+
+/**
+ * Sign a Gateway BurnIntent for cross-chain USDC settlement.
+ * @param {Object} burnIntent — burn intent object
+ * @returns {Object|null} — { intent, signature }
+ */
+window.signGatewayBurnIntent = async function signGatewayBurnIntent(burnIntent) {
+  if (!signer) {
+    console.error('[wallet] No signer available.');
+    return null;
+  }
+  try {
+    // Sign the burn intent as a message for the hackathon
+    const intentJson = JSON.stringify(burnIntent);
+    const signature = await signer.signMessage(intentJson);
+    console.log('[wallet] Signed gateway burn intent');
+
+    return {
+      intent: burnIntent,
+      signature: signature,
+    };
+  } catch (err) {
+    console.error('[wallet] Gateway burn intent signing failed:', err);
+    return null;
+  }
+};
+
+/**
+ * Initiate a settlement via the backend API.
+ * Handles the full flow: sign authorization → submit to backend → get tx hash.
+ *
+ * @param {string} toSubname — recipient's subname (e.g. "cool-tiger")
+ * @param {string} amount — amount in USDC
+ * @param {number} groupId — optional group ID for context
+ * @param {string} type — "authorization" or "gateway"
+ * @returns {Object|null} — { tx_hash, status } or null on failure
+ */
+window.initiateSettlement = async function initiateSettlement(toSubname, amount, groupId, type) {
+  type = type || 'authorization';
+  const chainId = window.walletChainId || 11155111;
+
+  let body = {
+    type: type,
+    to_subname: toSubname,
+    amount: amount,
+    source_chain: chainId,
+    dest_chain: chainId,
+  };
+  if (groupId) body.group_id = groupId;
+
+  if (type === 'authorization') {
+    const settlementAddr = getSettlementAddress(chainId);
+    const authData = await signSettlementAuthorization(settlementAddr, amount, chainId);
+    if (!authData) return null;
+    Object.assign(body, authData);
+  } else if (type === 'gateway') {
+    // For cross-chain, we'd need the burn intent from an estimate call first
+    // Simplified for hackathon
+    const burnIntent = { amount, chainId };
+    const signed = await signGatewayBurnIntent(burnIntent);
+    if (!signed) return null;
+    body.signed_burn_intent = signed;
+  }
+
+  try {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                      document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    const resp = await fetch('/api/settle/for-user/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const result = await resp.json();
+    if (resp.ok) {
+      console.log('[wallet] Settlement submitted:', result.tx_hash);
+      return result;
+    } else {
+      console.error('[wallet] Settlement failed:', result.error);
+      return null;
+    }
+  } catch (err) {
+    console.error('[wallet] Settlement request failed:', err);
+    return null;
+  }
 };
 
 // ────────────────────────────────────────────────────────

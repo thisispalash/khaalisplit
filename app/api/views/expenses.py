@@ -1,5 +1,6 @@
 """
 Expense views — HTMX partial responses for expense management.
+On-chain operations use *For relay functions via send_tx().
 """
 import json
 import logging
@@ -9,6 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
+from web3 import Web3
 
 from api.forms.expenses import AddExpenseForm
 from api.models import (
@@ -17,8 +19,17 @@ from api.models import (
   CachedGroup,
   CachedGroupMember,
 )
+from api.utils.web3_utils import send_tx
 
 logger = logging.getLogger('wide_event')
+
+
+def _get_user_address(user):
+  """Get the user's primary checksummed address, or empty string."""
+  addr = user.addresses.filter(is_primary=True).first()
+  if not addr:
+    addr = user.addresses.first()
+  return Web3.to_checksum_address(addr.address) if addr else ''
 
 
 def _is_group_member(user, group):
@@ -48,7 +59,7 @@ def add(request, group_id):
       'group': group,
     })
 
-  primary_addr = request.user.addresses.filter(is_primary=True).first()
+  creator_address = _get_user_address(request.user)
 
   # Build participants — for equal splits, all accepted members
   members = CachedGroupMember.objects.filter(
@@ -73,13 +84,29 @@ def add(request, group_id):
   # Placeholder expense_id until on-chain tx confirms
   placeholder_id = int(time.time() * 1000) % (2**31)
 
+  data_hash = form.cleaned_data.get('data_hash', '')
+  encrypted_data = form.cleaned_data.get('encrypted_data', '')
+
+  # On-chain: addExpenseFor (non-blocking)
+  if creator_address and data_hash:
+    try:
+      data_hash_bytes = bytes.fromhex(data_hash.replace('0x', '') if data_hash.startswith('0x') else data_hash)
+      encrypted_data_bytes = bytes.fromhex(encrypted_data.replace('0x', '') if encrypted_data.startswith('0x') else encrypted_data) if encrypted_data else b'\x00'
+      tx_hash = send_tx(
+        'expenses', 'addExpenseFor',
+        creator_address, group.group_id, data_hash_bytes, encrypted_data_bytes,
+      )
+      logger.info(f'addExpenseFor tx={tx_hash}')
+    except Exception:
+      logger.exception('addExpenseFor on-chain call failed')
+
   expense = CachedExpense.objects.create(
     expense_id=placeholder_id,
     group=group,
     creator=request.user,
-    creator_address=primary_addr.address if primary_addr else '',
-    data_hash=form.cleaned_data.get('data_hash', ''),
-    encrypted_data=form.cleaned_data.get('encrypted_data', ''),
+    creator_address=creator_address,
+    data_hash=data_hash,
+    encrypted_data=encrypted_data,
     amount=form.cleaned_data['amount'],
     description=form.cleaned_data['description'],
     split_type=form.cleaned_data['split_type'],

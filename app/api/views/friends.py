@@ -2,6 +2,7 @@
 Friend views — HTMX partial responses for friend management.
 
 All views return HTML partials for HTMX swap targets.
+On-chain operations use *For relay functions via send_tx().
 """
 import logging
 
@@ -10,10 +11,20 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
+from web3 import Web3
 
 from api.models import Activity, CachedFriend, User
+from api.utils.web3_utils import send_tx
 
 logger = logging.getLogger('wide_event')
+
+
+def _get_user_address(user):
+  """Get the user's primary checksummed address, or empty string."""
+  addr = user.addresses.filter(is_primary=True).first()
+  if not addr:
+    addr = user.addresses.first()
+  return Web3.to_checksum_address(addr.address) if addr else ''
 
 
 @login_required(login_url='/api/auth/login/')
@@ -57,18 +68,15 @@ def send_request(request, subname):
   if friend_user == request.user:
     return HttpResponse('Cannot befriend yourself', status=400)
 
-  # Get friend's primary address
-  friend_addr = friend_user.addresses.filter(is_primary=True).first()
-  if not friend_addr:
-    friend_addr = friend_user.addresses.first()
-  address = friend_addr.address if friend_addr else ''
+  user_address = _get_user_address(request.user)
+  friend_address = _get_user_address(friend_user)
 
   # Create outgoing request
   _, created = CachedFriend.objects.get_or_create(
     user=request.user,
     friend_user=friend_user,
     defaults={
-      'friend_address': address,
+      'friend_address': friend_address,
       'status': CachedFriend.Status.PENDING_SENT,
     },
   )
@@ -79,12 +87,18 @@ def send_request(request, subname):
       user=friend_user,
       friend_user=request.user,
       defaults={
-        'friend_address': request.user.addresses.filter(is_primary=True).first().address
-        if request.user.addresses.filter(is_primary=True).exists()
-        else '',
+        'friend_address': user_address,
         'status': CachedFriend.Status.PENDING_RECEIVED,
       },
     )
+
+    # On-chain: requestFriendFor (non-blocking)
+    if user_address and friend_address:
+      try:
+        tx_hash = send_tx('friends', 'requestFriendFor', user_address, friend_address)
+        logger.info(f'requestFriendFor tx={tx_hash}')
+      except Exception:
+        logger.exception('requestFriendFor on-chain call failed')
 
     Activity.objects.create(
       user=request.user,
@@ -124,6 +138,16 @@ def accept(request, subname):
     friend_user=request.user,
   ).update(status=CachedFriend.Status.ACCEPTED)
 
+  # On-chain: acceptFriendFor (non-blocking)
+  user_address = _get_user_address(request.user)
+  requester_address = _get_user_address(incoming.friend_user)
+  if user_address and requester_address:
+    try:
+      tx_hash = send_tx('friends', 'acceptFriendFor', user_address, requester_address)
+      logger.info(f'acceptFriendFor tx={tx_hash}')
+    except Exception:
+      logger.exception('acceptFriendFor on-chain call failed')
+
   Activity.objects.create(
     user=request.user,
     action_type=Activity.ActionType.FRIEND_ACCEPTED,
@@ -160,11 +184,21 @@ def remove(request, subname):
       friend_user=request.user,
     ).update(status=CachedFriend.Status.REMOVED)
 
-    Activity.objects.create(
-      user=request.user,
-      action_type=Activity.ActionType.FRIEND_REMOVED,
-      message=f'Removed friend {subname}',
-    )
+  # On-chain: removeFriendFor (non-blocking)
+  user_address = _get_user_address(request.user)
+  friend_addr = _get_user_address(friend.friend_user) if friend.friend_user else ''
+  if user_address and friend_addr:
+    try:
+      tx_hash = send_tx('friends', 'removeFriendFor', user_address, friend_addr)
+      logger.info(f'removeFriendFor tx={tx_hash}')
+    except Exception:
+      logger.exception('removeFriendFor on-chain call failed')
+
+  Activity.objects.create(
+    user=request.user,
+    action_type=Activity.ActionType.FRIEND_REMOVED,
+    message=f'Removed friend {subname}',
+  )
 
   return HttpResponse('')  # Empty response removes the card via HTMX swap
 
