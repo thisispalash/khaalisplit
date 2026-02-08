@@ -1,8 +1,0 @@
-<div id="balance-summary" class="space-y-3">
-  <h2 class="text-sm font-medium text-foreground/60">Balances</h2>
-  <div hx-get="/api/settle/{{ group.group_id }}/debts/"
-    hx-trigger="load"
-    hx-swap="innerHTML">
-    {% include 'partials/loading.html' %}
-  </div>
-</div>
