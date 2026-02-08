@@ -3,6 +3,13 @@
 > How contracts are deployed deterministically and how the system spans multiple chains.
 
 ## Cross-Chain Topology
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-1.png`](./img/04-deployment-and-cross-chain-1.png)
+>
+> </details>
 
 ```mermaid
 graph TB
@@ -64,6 +71,13 @@ graph TB
 ## CREATE2 Deterministic Deployment
 
 The `kdioDeployer` factory ensures the same proxy address across all chains for the Settlement contract.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-2.png`](./img/04-deployment-and-cross-chain-2.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -101,6 +115,13 @@ sequenceDiagram
 Two deployment scripts handle the full system:
 
 ### `DeployCore.s.sol` — Home Chain (Sepolia)
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-3.png`](./img/04-deployment-and-cross-chain-3.png)
+>
+> </details>
 
 ```mermaid
 graph TD
@@ -124,6 +145,13 @@ graph TD
 ```
 
 ### `DeploySettlement.s.sol` — Each Chain
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-4.png`](./img/04-deployment-and-cross-chain-4.png)
+>
+> </details>
 
 ```mermaid
 graph TD
@@ -146,6 +174,13 @@ graph TD
 ## UUPS Upgrade Pattern
 
 All contracts (except kdioDeployer) follow the same upgrade pattern:
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-5.png`](./img/04-deployment-and-cross-chain-5.png)
+>
+> </details>
 
 ```mermaid
 graph LR
@@ -184,6 +219,13 @@ graph LR
 ## Cross-Chain Settlement Sequence (CCTP End-to-End)
 
 How a payment moves from Sepolia to Base via CCTP burn-and-mint:
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-6.png`](./img/04-deployment-and-cross-chain-6.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -226,6 +268,13 @@ sequenceDiagram
 ## Cross-Chain Settlement Sequence (Gateway Mint)
 
 How a payment moves cross-chain via Circle Gateway (burn on source → attestation → mint on destination):
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-7.png`](./img/04-deployment-and-cross-chain-7.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -270,6 +319,13 @@ sequenceDiagram
 ## UUPS Upgrade Sequence
 
 How a contract upgrade works, showing the on-chain transaction flow:
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`04-deployment-and-cross-chain-8.png`](./img/04-deployment-and-cross-chain-8.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram

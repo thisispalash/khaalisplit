@@ -3,6 +3,14 @@
 > High-level view of all contracts, their roles, and how they connect.
 
 ## System Architecture
+> <details>
+>  
+>  <summary>see rendered image</summary>
+>
+>  ![`01-contract-overview-1.png`](./img/01-contract-overview-1.png)
+>
+> </details>
+
 
 ```mermaid
 graph TB
@@ -85,6 +93,13 @@ graph TB
 ## Inter-Contract Call Flow
 
 A single settlement touches nearly every contract. This sequence shows the full chain of cross-contract calls.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`01-contract-overview-2.png`](./img/01-contract-overview-2.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -139,6 +154,13 @@ sequenceDiagram
 ## Social Layer Dependency Chain
 
 The Social layer forms a strict dependency chain where each contract validates against the previous one.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`01-contract-overview-3.png`](./img/01-contract-overview-3.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram

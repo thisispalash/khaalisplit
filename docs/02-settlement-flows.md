@@ -5,6 +5,13 @@
 ## Overview
 
 khaaliSplit supports two settlement entry points, each routing through one of two payment rails based on the recipient's ENS text record preferences.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`02-settlement-flows-1.png`](./img/02-settlement-flows-1.png)
+>
+> </details>
 
 ```mermaid
 graph LR
@@ -41,6 +48,13 @@ graph LR
 ## Flow 1: Direct Settlement (EIP-3009)
 
 The primary flow for peer-to-peer payments. The sender signs a `ReceiveWithAuthorization` message off-chain; anyone can submit it on-chain (enables NFC, Bluetooth, QR, or relayed payments).
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`02-settlement-flows-2.png`](./img/02-settlement-flows-2.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -84,6 +98,13 @@ sequenceDiagram
 ## Flow 2: Gateway Mint Settlement (Cross-Chain)
 
 For cross-chain payments from a Gateway balance. The sender signs a BurnIntent (EIP-712) off-chain; the backend obtains a Circle attestation and calls the contract.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`02-settlement-flows-3.png`](./img/02-settlement-flows-3.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -137,6 +158,13 @@ sequenceDiagram
 ## Flow 3: CCTP Routing (Opt-In Cross-Chain Burn)
 
 When a recipient opts into CCTP by setting `payment.flow = "cctp"` and `payment.cctp = "<domain>"` in their ENS text records. Works with either entry point.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`02-settlement-flows-4.png`](./img/02-settlement-flows-4.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram

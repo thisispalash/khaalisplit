@@ -3,6 +3,13 @@
 > End-to-end flows from a user's perspective: onboarding, social graph, expense tracking, and settlement.
 
 ## Complete User Journey
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`03-user-journeys-1.png`](./img/03-user-journeys-1.png)
+>
+> </details>
 
 ```mermaid
 graph LR
@@ -21,6 +28,13 @@ graph LR
 ## 1. Onboarding Flow
 
 A new user registers their wallet, gets an ENS subname, and is linked into the reputation system.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`03-user-journeys-2.png`](./img/03-user-journeys-2.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -58,6 +72,13 @@ sequenceDiagram
 ## 2. Social Graph Flow
 
 Users build their friend graph and form expense-splitting groups.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`03-user-journeys-3.png`](./img/03-user-journeys-3.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -107,6 +128,13 @@ sequenceDiagram
 ## 3. Expense Tracking Flow
 
 Group members add and update encrypted expenses. Only hashes are stored on-chain; full encrypted data is emitted in events for off-chain indexing.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`03-user-journeys-4.png`](./img/03-user-journeys-4.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -153,6 +181,13 @@ sequenceDiagram
 ## 4. Settlement Flow (Simplified User Perspective)
 
 After expenses are tallied client-side, the payer settles their debt in USDC.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`03-user-journeys-5.png`](./img/03-user-journeys-5.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -189,6 +224,13 @@ sequenceDiagram
 ---
 
 ## End-to-End Summary
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`03-user-journeys-6.png`](./img/03-user-journeys-6.png)
+>
+> </details>
 
 ```mermaid
 graph TD

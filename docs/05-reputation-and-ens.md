@@ -5,6 +5,13 @@
 ## ENS as Identity Backbone
 
 Every khaaliSplit user gets an ENS subname (`{user}.khaalisplit.eth`) that serves as their on-chain identity. The subname node (`bytes32`) is the canonical identifier used across the entire system.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-1.png`](./img/05-reputation-and-ens-1.png)
+>
+> </details>
 
 ```mermaid
 graph TB
@@ -47,6 +54,13 @@ graph TB
 ---
 
 ## Reputation Score Mechanics
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-2.png`](./img/05-reputation-and-ens-2.png)
+>
+> </details>
 
 ```mermaid
 graph LR
@@ -83,6 +97,13 @@ graph LR
 ## Reputation Update & ENS Sync Flow
 
 After every settlement, the reputation score is updated and automatically synced to the user's ENS text record.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-3.png`](./img/05-reputation-and-ens-3.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -117,6 +138,13 @@ sequenceDiagram
 ## Subname Registration Sequence
 
 How a new ENS subname is registered and wired into the system:
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-4.png`](./img/05-reputation-and-ens-4.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -159,6 +187,13 @@ sequenceDiagram
 ## Record Update Authorization Sequence
 
 How the `_isAuthorized` check works when different callers try to set records:
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-5.png`](./img/05-reputation-and-ens-5.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
@@ -203,6 +238,13 @@ sequenceDiagram
 ## Authorization Model
 
 Three contracts share a trust relationship for reading and writing ENS records:
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-6.png`](./img/05-reputation-and-ens-6.png)
+>
+> </details>
 
 ```mermaid
 graph TD
@@ -243,6 +285,13 @@ graph TD
 ## Reputation Sentinel Value
 
 When the reputation contract is not configured on the settlement contract (`address(0)`), the `SettlementCompleted` event emits a sentinel value of **500** for `senderReputation`. This is distinguishable from valid scores (0–100) and lets indexers/clients know that reputation was not tracked for this settlement.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-7.png`](./img/05-reputation-and-ens-7.png)
+>
+> </details>
 
 ```mermaid
 graph LR
@@ -263,6 +312,13 @@ graph LR
 ## Encryption Model
 
 The contract system supports three tiers of client-side encryption. Contracts never see plaintext data.
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-8.png`](./img/05-reputation-and-ens-8.png)
+>
+> </details>
 
 ```mermaid
 graph TD
@@ -301,6 +357,13 @@ graph TD
 ### Encryption Key Exchange Sequence
 
 How encrypted group keys are distributed when creating a group and inviting members:
+> <details>
+>
+>  <summary>see rendered image</summary>
+>
+>  ![`05-reputation-and-ens-9.png`](./img/05-reputation-and-ens-9.png)
+>
+> </details>
 
 ```mermaid
 sequenceDiagram
