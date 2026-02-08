@@ -13,19 +13,19 @@ SHELL := /bin/bash
 
 dev:
 	@trap 'kill 0' INT; \
-		tailwindcss -i static/css/tw-in.css -o static/css/tw.css --watch & \
+		./tailwindcss -i static/css/tw-in.css -o static/css/tw.css --watch & \
 		poetry run python manage.py runserver 0.0.0.0:8000
 
 server:
 	poetry run python manage.py runserver 0.0.0.0:8000
 
 tailwind:
-	tailwindcss -i static/css/tw-in.css -o static/css/tw.css --watch
+	./tailwindcss -i static/css/tw-in.css -o static/css/tw.css --watch
 
 # ── build ────────────────────────────────────────────────────────
 
 build-css:
-	tailwindcss -i static/css/tw-in.css -o static/css/tw.css --minify
+	./tailwindcss -i static/css/tw-in.css -o static/css/tw.css --minify
 
 collectstatic:
 	poetry run python manage.py collectstatic --noinput
