@@ -1,0 +1,26 @@
+{# partials/member_list.html — HTMX partial for group member list
+   Context:
+     members : queryset of CachedGroupMember objects (.user, .member_address, .status)
+     group   : group object
+   Composes: photons/user-pill.html, quanta/badge.html, quanta/address.html
+#}
+
+<div class="space-y-2" id="member-list">
+  {% for member in members %}
+  <div class="flex items-center justify-between p-2 border border-border rounded-md">
+    <div class="flex items-center gap-2">
+      {% include 'photons/user-pill.html' with user=member.user link="true" size="sm" %}
+      {% if member.status == 'invited' %}
+        {% include 'quanta/badge.html' with status='invited' label='Invited' %}
+      {% elif member.status == 'left' %}
+        {% include 'quanta/badge.html' with status='left' label='Left' %}
+      {% endif %}
+    </div>
+    {% if member.member_address %}
+      {% include 'quanta/address.html' with address=member.member_address %}
+    {% endif %}
+  </div>
+  {% empty %}
+  <p class="text-subtle text-sm">No members yet.</p>
+  {% endfor %}
+</div>

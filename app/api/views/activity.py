@@ -42,7 +42,7 @@ def load_more(request):
   request._wide_event['extra']['activity_page'] = page
   request._wide_event['extra']['activity_count'] = len(activity_list)
 
-  return render(request, 'activity/partials/activity_list.html', {
+  return render(request, 'partials/activity_list.html', {
     'activities': activity_list,
     'has_more': has_more,
     'next_page': page + 1,

@@ -33,10 +33,40 @@ browser ─── HTMX partials ──► Django views ──► Postgres (cache
 ### Django Apps
 
 - **`api`** — Models, HTMX views, forms, utils (web3, ENS, crypto, debt simplification)
-- **`web`** — Desktop full-page routes
-- **`m`** — Mobile full-page routes (PWA-ready)
+- **`web`** — Full-page routes (renders page templates)
+- **`m`** — Mobile routes (PWA-ready, separate app)
 - **`config`** — Settings, WSGI, URL root, context processors
 - **`middleware`** — Wide event logging (one structured JSON log per request)
+
+## Design System
+
+The UI follows a token-driven component hierarchy. Two base colors (black background, green foreground) derive all semantic colors via `color-mix()`.
+
+### Component Hierarchy
+
+```
+quanta/     → Stateless primitives (button, badge, spinner, toast, icon, address, amount, ...)
+photons/    → Stateful composites (form-field, user-pill, wallet-button, search-bar, debt-arrow, ...)
+lenses/     → Card templates (activity-card, friend-card, group-card, expense-card, settlement-card, invite-card)
+prisms/     → Section templates (nav-header, bottom-nav, footer, activity-feed, friend-list, group-members, ...)
+pages/      → Full page templates (extend base.html, compose from prisms/lenses/photons/quanta)
+partials/   → API response fragments (HTMX swap targets returned by api/views/)
+```
+
+### Design Tokens
+
+All colors derived from two base values via `color-mix()` in `tw-in.css`:
+
+| Token | Usage |
+|-------|-------|
+| `surface` / `surface-raised` | Card/section backgrounds |
+| `border` / `border-hover` | Borders, dividers |
+| `foreground` | Primary text, errors (max contrast = urgency) |
+| `muted` | Secondary text, pending states |
+| `subtle` | Timestamps, placeholders |
+| `emphasis` / `emphasis-muted` | Success, confirmed states |
+| `dim` / `dim-muted` | Inactive, left states |
+| `accent-muted` | Error backgrounds |
 
 ## Project Structure
 
@@ -51,24 +81,38 @@ app/
 ├── middleware/          # wide_event_logging
 ├── static/
 │   ├── css/            # tw-in.css (Tailwind input), tw.css (compiled)
+│   ├── font/           # Nunito Sans, Syne Mono (self-hosted TTF)
 │   └── js/             # htmx, hyperscript, ethers, wallet.js, app.js, crypto.js
 ├── templates/
-│   ├── auth/           # signup, login, onboarding
-│   ├── activity/       # feed + partials
-│   ├── friends/        # list + partials
-│   ├── groups/         # list, detail, create + partials
-│   ├── expenses/       # partials (form, card, list)
-│   ├── settlement/     # settle page + partials
-│   ├── components/     # header, footer
-│   └── partials/       # toast, loading
-├── web/                # desktop routes
-├── m/                  # mobile routes
+│   ├── base.html       # unified base (desktop nav + mobile bottom-nav + footer)
+│   ├── pages/          # 11 full-page templates
+│   ├── prisms/         # 8 section templates
+│   ├── lenses/         # 6 card templates
+│   ├── photons/        # 7 stateful composites
+│   ├── quanta/         # 12 stateless primitives + 10 SVG icons
+│   └── partials/       # 7 API response fragments (HTMX swap targets)
+├── web/                # full-page routes + urls
+├── m/                  # mobile routes (PWA)
 ├── Dockerfile
 ├── Makefile
 ├── docker-compose.yml
 ├── manage.py
 └── pyproject.toml
 ```
+
+### Template File Inventory
+
+**pages/ (11):** home, signup, login, onboarding-profile, onboarding-wallet, friends, groups-list, group-detail, group-create, settle, profile
+
+**prisms/ (8):** nav-header, bottom-nav, footer, activity-feed, friend-list, group-members, group-expenses, balance-summary
+
+**lenses/ (6):** activity-card, friend-card, group-card, expense-card, settlement-card, invite-card
+
+**photons/ (7):** form-field, form-errors, user-pill, wallet-button, search-bar, debt-arrow, step-indicator
+
+**quanta/ (12):** button (+2 internal), badge, spinner, toast, icon, address, amount, empty-state, input, select
+
+**partials/ (7):** activity_list, search_results, pending_requests, member_list, expense_list, expense_form, debt_summary
 
 ## Setup
 
@@ -179,6 +223,46 @@ CONTRACT_RESOLVER=
 ### Activity Feed
 - Paginated feed with HTMX infinite scroll (`hx-trigger="revealed"`)
 - 14 action types with per-type icons
+
+## URL Routes
+
+### Web (full pages)
+
+| Route | View | Template |
+|-------|------|----------|
+| `/` | `home` | `pages/home.html` (auth) / `pages/signup.html` (anon) |
+| `/friends/` | `friends_list` | `pages/friends.html` |
+| `/groups/` | `groups_list` | `pages/groups-list.html` |
+| `/groups/create/` | `group_create` | `pages/group-create.html` |
+| `/groups/<id>/` | `group_detail` | `pages/group-detail.html` |
+| `/settle/<id>/` | `settle` | `pages/settle.html` |
+| `/profile/` | `profile` | `pages/profile.html` (own, editable) |
+| `/profile/<subname>/` | `profile_public` | `pages/profile.html` (public or own) |
+| `/u/<subname>/` | `profile_public` | `pages/profile.html` (short URL) |
+
+### API (HTMX partials + JSON)
+
+| Route | Returns |
+|-------|---------|
+| `/api/auth/signup/` | `pages/signup.html` |
+| `/api/auth/login/` | `pages/login.html` |
+| `/api/auth/onboarding/profile/` | `pages/onboarding-profile.html` |
+| `/api/auth/onboarding/wallet/` | `pages/onboarding-wallet.html` |
+| `/api/activity/load-more/` | `partials/activity_list.html` |
+| `/api/friends/search/` | `partials/search_results.html` |
+| `/api/friends/request/<subname>/` | `lenses/friend-card.html` |
+| `/api/friends/accept/<addr>/` | `lenses/friend-card.html` |
+| `/api/friends/pending/` | `partials/pending_requests.html` |
+| `/api/groups/create/` | redirect / `pages/group-create.html` |
+| `/api/groups/<id>/invite/` | `partials/member_list.html` |
+| `/api/groups/<id>/accept/` | `lenses/group-card.html` |
+| `/api/groups/<id>/members/` | `partials/member_list.html` |
+| `/api/groups/<id>/balances/` | `prisms/balance-summary.html` |
+| `/api/expenses/<id>/add/` | `partials/expense_list.html` / `partials/expense_form.html` |
+| `/api/expenses/<id>/list/` | `partials/expense_list.html` |
+| `/api/expenses/<id>/update/` | `lenses/expense-card.html` |
+| `/api/settle/<id>/debts/` | `partials/debt_summary.html` |
+| `/api/settle/status/<hash>/` | `lenses/settlement-card.html` |
 
 ## Smart Contracts
 

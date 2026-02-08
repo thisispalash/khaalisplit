@@ -1,0 +1,50 @@
+{# partials/expense_form.html — Add expense form with client-side encryption
+   Context:
+     form  : AddExpenseForm (bound or unbound)
+     group : group object (.group_id)
+   Composes: photons/form-errors.html, photons/form-field.html
+   Preserves: Hyperscript encryption flow for group key
+#}
+
+<form id="expense-form"
+  hx-post="/api/expenses/{{ group.group_id }}/add/"
+  hx-target="#expense-list"
+  hx-swap="innerHTML"
+  class="p-4 border border-border rounded-md space-y-3"
+>
+  {% csrf_token %}
+
+  {% include 'photons/form-errors.html' with errors=form.non_field_errors %}
+
+  {% include 'photons/form-field.html' with field=form.description label='Description' %}
+
+  <div class="grid grid-cols-2 gap-3">
+    {% include 'photons/form-field.html' with field=form.amount label='Amount' %}
+    {% include 'photons/form-field.html' with field=form.split_type label='Split' %}
+  </div>
+
+  {% include 'photons/form-field.html' with field=form.category label='Category' %}
+
+  {{ form.encrypted_data }}
+  {{ form.data_hash }}
+
+  <button type="submit"
+    class="w-full inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
+           bg-foreground text-background hover:bg-foreground/90 py-2 text-sm"
+    _="on click
+         if window.khaaliCrypto and window.khaaliCrypto.groupKey
+           set formEl to closest <form/>
+           set desc to formEl.querySelector('[name=description]').value
+           set amt to formEl.querySelector('[name=amount]').value
+           set cat to formEl.querySelector('[name=category]').value
+           set splitType to formEl.querySelector('[name=split_type]').value
+           set plaintext to JSON.stringify({description: desc, amount: amt, category: cat, split_type: splitType})
+           set result to await window.khaaliCrypto.encrypt(plaintext)
+           set formEl.querySelector('[name=encrypted_data]').value to result.ciphertext
+           set formEl.querySelector('[name=data_hash]').value to result.hash
+         end
+       end"
+  >
+    Add Expense
+  </button>
+</form>

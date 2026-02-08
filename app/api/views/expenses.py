@@ -43,7 +43,7 @@ def add(request, group_id):
 
   form = AddExpenseForm(request.POST)
   if not form.is_valid():
-    return render(request, 'expenses/partials/expense_form.html', {
+    return render(request, 'partials/expense_form.html', {
       'form': form,
       'group': group,
     })
@@ -99,7 +99,7 @@ def add(request, group_id):
 
   # Return updated expense list
   expenses = CachedExpense.objects.filter(group=group).order_by('-created_at')
-  return render(request, 'expenses/partials/expense_list.html', {
+  return render(request, 'partials/expense_list.html', {
     'expenses': expenses,
     'group': group,
   })
@@ -116,7 +116,7 @@ def expense_list(request, group_id):
   expenses = CachedExpense.objects.filter(group=group).order_by('-created_at')
   form = AddExpenseForm()
 
-  return render(request, 'expenses/partials/expense_list.html', {
+  return render(request, 'partials/expense_list.html', {
     'expenses': expenses,
     'group': group,
     'form': form,
@@ -156,7 +156,7 @@ def update(request, expense_id):
 
   request._wide_event['extra']['expense_updated'] = expense.expense_id
 
-  return render(request, 'expenses/partials/expense_card.html', {
+  return render(request, 'lenses/expense-card.html', {
     'expense': expense,
     'group': expense.group,
   })

@@ -22,7 +22,7 @@ def create(request):
   """Create a new group. Returns redirect to group detail."""
   form = CreateGroupForm(request.POST)
   if not form.is_valid():
-    return render(request, 'groups/create.html', {'form': form})
+    return render(request, 'pages/group-create.html', {'form': form})
 
   name = form.cleaned_data['name']
   name_hash = Web3.solidity_keccak(['string'], [name]).hex()
@@ -105,7 +105,7 @@ def invite(request, group_id):
 
   # Return updated member list
   members = group.members.select_related('user').all()
-  return render(request, 'groups/partials/member_list.html', {
+  return render(request, 'partials/member_list.html', {
     'members': members,
     'group': group,
   })
@@ -140,7 +140,7 @@ def accept_invite(request, group_id):
     message=f'Joined group "{group.name}"',
   )
 
-  return render(request, 'groups/partials/group_card.html', {'group': group})
+  return render(request, 'lenses/group-card.html', {'group': group})
 
 
 @login_required(login_url='/api/auth/login/')
@@ -184,7 +184,7 @@ def members(request, group_id):
     return HttpResponse('Group not found', status=404)
 
   member_list = group.members.select_related('user').all()
-  return render(request, 'groups/partials/member_list.html', {
+  return render(request, 'partials/member_list.html', {
     'members': member_list,
     'group': group,
   })
@@ -199,6 +199,6 @@ def balances(request, group_id):
     return HttpResponse('Group not found', status=404)
 
   # Balance calculation will be enriched in Step 10
-  return render(request, 'groups/partials/balance_summary.html', {
+  return render(request, 'prisms/balance-summary.html', {
     'group': group,
   })

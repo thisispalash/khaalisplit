@@ -1,0 +1,45 @@
+{# partials/pending_requests.html — HTMX partial for pending friend requests
+   Context:
+     pending : queryset of CachedFriend objects (.friend_user, .friend_address)
+   Uses inline markup with design tokens for accept/decline actions.
+#}
+
+{% if pending %}
+<div class="space-y-2">
+  <h3 class="text-sm font-medium text-muted">Pending Requests</h3>
+  {% for req in pending %}
+  <div class="flex items-center justify-between p-3 border border-border rounded-md"
+    id="pending-{{ req.friend_address }}">
+    <div>
+      {% if req.friend_user %}
+        <span class="font-mono text-sm">{{ req.friend_user.subname }}</span>
+      {% else %}
+        <span class="font-mono text-sm text-muted">
+          {{ req.friend_address|truncatechars:14 }}
+        </span>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
+               bg-foreground text-background hover:bg-foreground/90 px-3 py-1 text-xs"
+        hx-post="/api/friends/accept/{{ req.friend_address }}/"
+        hx-target="#pending-{{ req.friend_address }}"
+        hx-swap="outerHTML"
+      >
+        Accept
+      </button>
+      <button
+        class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
+               border border-border text-muted hover:text-foreground hover:border-border-hover px-3 py-1 text-xs"
+        hx-post="/api/friends/remove/{{ req.friend_address }}/"
+        hx-target="#pending-{{ req.friend_address }}"
+        hx-swap="outerHTML"
+      >
+        Decline
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
