@@ -36,6 +36,7 @@ interface IkhaaliSplitSettlement {
     event TokenRemoved(address indexed token);
     event TokenMessengerUpdated(address indexed tokenMessenger);
     event GatewayWalletUpdated(address indexed gatewayWallet);
+    event GatewayMinterUpdated(address indexed gatewayMinter);
     event DomainConfigured(uint256 indexed chainId, uint32 domain);
     event SubnameRegistryUpdated(address indexed subnameRegistry);
     event ReputationContractUpdated(address indexed reputationContract);
@@ -75,6 +76,22 @@ interface IkhaaliSplitSettlement {
         bytes calldata signature
     ) external;
 
+    /// @notice Settlement function for Gateway-minted USDC.
+    ///         Atomically calls gatewayMinter.gatewayMint() to mint USDC into
+    ///         this contract, then routes to recipient + updates reputation.
+    /// @param attestationPayload The attestation payload from Circle's Gateway API.
+    /// @param attestationSignature The attestation signature from Circle's Gateway API.
+    /// @param recipientNode The ENS namehash of the recipient's subname.
+    /// @param sender The sender's address (for reputation tracking).
+    /// @param memo Arbitrary data (e.g. encrypted memo for off-chain indexing).
+    function settleFromGateway(
+        bytes calldata attestationPayload,
+        bytes calldata attestationSignature,
+        bytes32 recipientNode,
+        address sender,
+        bytes calldata memo
+    ) external;
+
     // ──────────────────────────────────────────────
     //  Token Management
     // ──────────────────────────────────────────────
@@ -103,4 +120,7 @@ interface IkhaaliSplitSettlement {
 
     /// @notice Set the reputation contract for post-settlement score updates.
     function setReputationContract(address _reputationContract) external;
+
+    /// @notice Set the Circle Gateway Minter address.
+    function setGatewayMinter(address _gatewayMinter) external;
 }
