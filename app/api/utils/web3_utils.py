@@ -10,6 +10,7 @@ Server-side Ethereum interactions:
 All on-chain writes go through the backend wallet (BACKEND_PRIVATE_KEY).
 """
 import logging
+import threading
 
 from django.conf import settings
 from eth_account import Account
@@ -17,6 +18,28 @@ from eth_account.messages import encode_defunct
 from web3 import Web3
 
 logger = logging.getLogger('wide_event')
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Nonce manager — thread-safe incrementing to avoid nonce collisions
+# when multiple send_tx calls happen in rapid succession.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_nonce_lock = threading.Lock()
+_nonce_cache: dict[int, int] = {}  # chain_id → next nonce
+
+
+def _get_next_nonce(w3, address: str, chain_id: int) -> int:
+  """
+  Get the next nonce for the given address, accounting for pending txs.
+  Thread-safe: uses a lock and local cache to avoid nonce collisions.
+  """
+  with _nonce_lock:
+    on_chain_nonce = w3.eth.get_transaction_count(address, 'pending')
+    cached_nonce = _nonce_cache.get(chain_id, 0)
+    # Use whichever is higher — on-chain 'pending' count or our local tracker
+    nonce = max(on_chain_nonce, cached_nonce)
+    _nonce_cache[chain_id] = nonce + 1
+    return nonce
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -539,9 +562,10 @@ def send_tx(
   backend_account = Account.from_key(private_key)
 
   fn = getattr(contract.functions, fn_name)
+  nonce = _get_next_nonce(w3, backend_account.address, chain_id)
   tx = fn(*args).build_transaction({
     'from': backend_account.address,
-    'nonce': w3.eth.get_transaction_count(backend_account.address),
+    'nonce': nonce,
     'gas': gas,
     'gasPrice': w3.eth.gas_price,
     'chainId': chain_id,
