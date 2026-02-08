@@ -1,0 +1,171 @@
+# ── Friends ──────────────────────────────────────
+
+type RegisteredUser @entity {
+  id: ID!                  # address (lowercase)
+  pubKey: String!          # hex-encoded ECDH public key
+  registeredAt: Int!       # block timestamp
+  txHash: String!
+}
+
+type FriendRequest @entity {
+  id: ID!                  # sorted pair: "0xaaa-0xbbb"
+  from: String!            # requester address (lowercase)
+  to: String!              # target address (lowercase)
+  status: String!          # "pending" | "accepted" | "removed"
+  requestedAt: Int!
+  acceptedAt: Int
+  removedAt: Int
+  txHash: String!          # latest tx hash
+}
+
+# ── Groups ───────────────────────────────────────
+
+type Group @entity {
+  id: ID!                  # groupId (uint256 as string)
+  nameHash: String!        # bytes32 hex
+  creator: String!         # address (lowercase)
+  memberCount: Int!
+  createdAt: Int!
+  txHash: String!
+  members: [GroupMember!]! @derivedFrom(field: "group")
+  expenses: [Expense!]!    @derivedFrom(field: "group")
+}
+
+type GroupMember @entity {
+  id: ID!                  # "{groupId}-{memberAddress}"
+  group: Group!
+  memberAddress: String!   # address (lowercase)
+  invitedBy: String!       # address (lowercase)
+  status: String!          # "invited" | "accepted" | "left"
+  invitedAt: Int!
+  acceptedAt: Int
+  leftAt: Int
+  txHash: String!          # latest tx hash
+}
+
+# ── Expenses ─────────────────────────────────────
+
+type Expense @entity {
+  id: ID!                  # expenseId (uint256 as string)
+  group: Group!
+  creator: String!         # address (lowercase)
+  dataHash: String!        # bytes32 hex (keccak256 of plaintext)
+  encryptedData: String!   # hex-encoded AES-256-GCM ciphertext
+  createdAt: Int!
+  createdTxHash: String!   # original creation tx
+  updatedAt: Int           # null until updated
+  updatedTxHash: String    # null until updated
+}
+
+# ── Settlement ───────────────────────────────────
+
+type Settlement @entity {
+  id: ID!                  # "{chainId}-{txHash}-{logIndex}"
+  sender: String!          # address (lowercase)
+  recipient: String!       # address (lowercase)
+  token: String!           # address (lowercase)
+  amount: BigInt!          # in token decimals (e.g. 6 for USDC)
+  senderReputation: BigInt!# 0-100, or 500 if reputation not set
+  memo: String!            # hex-encoded memo bytes
+  sourceChainId: Int!      # chain where tx was mined
+  blockNumber: Int!
+  blockTimestamp: Int!
+  txHash: String!
+}
+
+type AllowedToken @entity {
+  id: ID!                  # "{chainId}-{tokenAddress}"
+  chainId: Int!
+  token: String!           # address (lowercase)
+  isAllowed: Boolean!
+  txHash: String!
+}
+
+# ── Settlement Admin Config ──────────────────────
+
+type SettlementConfig @entity {
+  id: ID!                  # "{chainId}-{configType}"
+  chainId: Int!
+  configType: String!      # "tokenMessenger" | "gatewayWallet" | "gatewayMinter" | "subnameRegistry" | "reputationContract"
+  value: String!           # address (lowercase)
+  txHash: String!
+}
+
+type CctpDomain @entity {
+  id: ID!                  # "{sourceChainId}-{targetChainId}"
+  sourceChainId: Int!
+  targetChainId: Int!
+  domain: Int!             # uint32 CCTP domain
+  txHash: String!
+}
+
+# ── Subnames ─────────────────────────────────────
+
+type Subname @entity {
+  id: ID!                  # bytes32 node (hex)
+  label: String!           # human-readable label (e.g. "alice")
+  owner: String!           # address (lowercase)
+  registeredAt: Int!
+  txHash: String!
+  textRecords: [TextRecord!]! @derivedFrom(field: "subname")
+}
+
+type TextRecord @entity {
+  id: ID!                  # "{node}-{key}"
+  subname: Subname!
+  key: String!
+  value: String!
+  txHash: String!
+}
+
+type AddrRecord @entity {
+  id: ID!                  # bytes32 node (hex)
+  node: String!
+  addr: String!            # address (lowercase)
+  txHash: String!
+}
+
+# ── Reputation ───────────────────────────────────
+
+type ReputationScore @entity {
+  id: ID!                  # address (lowercase)
+  score: BigInt!           # 0-100
+  totalSettlements: Int!
+  successfulSettlements: Int!
+  failedSettlements: Int!
+  lastUpdatedAt: Int!
+  txHash: String!
+}
+
+type ReputationUserNode @entity {
+  id: ID!                  # address (lowercase)
+  node: String!            # bytes32 ENS node (hex)
+  txHash: String!
+}
+
+# ── Resolver (deprecated but still deployed) ─────
+
+type ResolverSigner @entity {
+  id: ID!                  # address (lowercase)
+  isActive: Boolean!
+  txHash: String!
+}
+
+type ResolverUrl @entity {
+  id: ID!                  # "current" (singleton)
+  url: String!
+  txHash: String!
+}
+
+# ── kdioDeployer ─────────────────────────────────
+
+type Deployment @entity {
+  id: ID!                  # "{salt}-{proxy}"
+  proxy: String!           # address (lowercase)
+  salt: String!            # bytes32 hex
+  implementation: String!  # address (lowercase)
+  chainId: Int!
+  blockNumber: Int!
+  blockTimestamp: Int!
+  txHash: String!
+}

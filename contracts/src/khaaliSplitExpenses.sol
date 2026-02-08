@@ -42,6 +42,9 @@ contract khaaliSplitExpenses is Initializable, UUPSUpgradeable, OwnableUpgradeab
     /// @notice List of expense IDs per group.
     mapping(uint256 => uint256[]) private _groupExpenses;
 
+    /// @notice Authorized backend / relayer address.
+    address public backend;
+
     // ──────────────────────────────────────────────
     //  Events
     // ──────────────────────────────────────────────
@@ -76,6 +79,7 @@ contract khaaliSplitExpenses is Initializable, UUPSUpgradeable, OwnableUpgradeab
     error NotGroupMember(uint256 groupId, address user);
     error NotExpenseCreator(uint256 expenseId, address user);
     error ExpenseDoesNotExist(uint256 expenseId);
+    error NotBackend();
 
     // ──────────────────────────────────────────────
     //  Initializer
@@ -160,6 +164,70 @@ contract khaaliSplitExpenses is Initializable, UUPSUpgradeable, OwnableUpgradeab
     }
 
     // ──────────────────────────────────────────────
+    //  Backend relay: expense operations
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Backend relay: add an expense on behalf of `creator`.
+     * @param creator       The address adding the expense.
+     * @param groupId       The group this expense belongs to.
+     * @param dataHash      Keccak256 of the plaintext expense data.
+     * @param encryptedData AES-encrypted expense blob (emitted in event for indexer).
+     * @return expenseId    The newly created expense's ID.
+     */
+    function addExpenseFor(
+        address creator,
+        uint256 groupId,
+        bytes32 dataHash,
+        bytes calldata encryptedData
+    ) external returns (uint256 expenseId) {
+        if (msg.sender != backend) revert NotBackend();
+        if (!groupRegistry.isMember(groupId, creator)) {
+            revert NotGroupMember(groupId, creator);
+        }
+
+        expenseId = ++expenseCount;
+
+        expenses[expenseId] = Expense({
+            groupId: groupId,
+            creator: creator,
+            dataHash: dataHash,
+            timestamp: block.timestamp
+        });
+
+        _groupExpenses[groupId].push(expenseId);
+
+        emit ExpenseAdded(groupId, expenseId, creator, dataHash, encryptedData);
+    }
+
+    /**
+     * @notice Backend relay: update an expense on behalf of `creator`.
+     * @param creator          The address updating the expense (must be original creator).
+     * @param expenseId        The expense to update.
+     * @param newDataHash      New keccak256 of the updated expense data.
+     * @param newEncryptedData New AES-encrypted expense blob (emitted in event).
+     */
+    function updateExpenseFor(
+        address creator,
+        uint256 expenseId,
+        bytes32 newDataHash,
+        bytes calldata newEncryptedData
+    ) external {
+        if (msg.sender != backend) revert NotBackend();
+        Expense storage e = expenses[expenseId];
+        if (e.creator == address(0)) revert ExpenseDoesNotExist(expenseId);
+        if (e.creator != creator) revert NotExpenseCreator(expenseId, creator);
+        if (!groupRegistry.isMember(e.groupId, creator)) {
+            revert NotGroupMember(e.groupId, creator);
+        }
+
+        e.dataHash = newDataHash;
+        e.timestamp = block.timestamp;
+
+        emit ExpenseUpdated(e.groupId, expenseId, creator, newDataHash, newEncryptedData);
+    }
+
+    // ──────────────────────────────────────────────
     //  Views
     // ──────────────────────────────────────────────
 
@@ -182,6 +250,17 @@ contract khaaliSplitExpenses is Initializable, UUPSUpgradeable, OwnableUpgradeab
      */
     function getGroupExpenses(uint256 groupId) external view returns (uint256[] memory) {
         return _groupExpenses[groupId];
+    }
+
+    // ──────────────────────────────────────────────
+    //  Admin
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Updates the authorized backend address.
+     */
+    function setBackend(address _backend) external onlyOwner {
+        backend = _backend;
     }
 
     // ──────────────────────────────────────────────

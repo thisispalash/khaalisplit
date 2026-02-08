@@ -66,6 +66,10 @@ contract khaaliSplitExpensesTest is Test {
             abi.encodeCall(khaaliSplitExpenses.initialize, (address(groupsContract), owner))
         );
         expensesContract = khaaliSplitExpenses(address(expensesProxy));
+
+        // Set backend on Expenses
+        vm.prank(owner);
+        expensesContract.setBackend(backend);
     }
 
     // ──────────────────────────────────────────────
@@ -234,6 +238,160 @@ contract khaaliSplitExpensesTest is Test {
             )
         );
         expensesContract.updateExpense(expenseId, keccak256("x"), hex"00");
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: addExpenseFor
+    // ══════════════════════════════════════════════
+
+    function test_addExpenseFor_success() public {
+        vm.prank(backend);
+        vm.expectEmit(true, true, true, true);
+        emit khaaliSplitExpenses.ExpenseAdded(groupId, 1, alice, dataHash, encryptedData);
+        uint256 expenseId = expensesContract.addExpenseFor(alice, groupId, dataHash, encryptedData);
+
+        assertEq(expenseId, 1);
+        assertEq(expensesContract.expenseCount(), 1);
+
+        (uint256 gId, address creator, bytes32 dHash, uint256 ts) =
+            expensesContract.getExpense(expenseId);
+
+        assertEq(gId, groupId);
+        assertEq(creator, alice);
+        assertEq(dHash, dataHash);
+        assertEq(ts, block.timestamp);
+
+        uint256[] memory ids = expensesContract.getGroupExpenses(groupId);
+        assertEq(ids.length, 1);
+        assertEq(ids[0], 1);
+    }
+
+    function test_addExpenseFor_notBackend_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitExpenses.NotBackend.selector);
+        expensesContract.addExpenseFor(alice, groupId, dataHash, encryptedData);
+    }
+
+    function test_addExpenseFor_notGroupMember_reverts() public {
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                khaaliSplitExpenses.NotGroupMember.selector,
+                groupId,
+                stranger
+            )
+        );
+        expensesContract.addExpenseFor(stranger, groupId, dataHash, encryptedData);
+    }
+
+    function test_addExpenseFor_originalStillWorks() public {
+        vm.prank(alice);
+        uint256 expenseId = expensesContract.addExpense(groupId, dataHash, encryptedData);
+        assertEq(expenseId, 1);
+    }
+
+    // ══════════════════════════════════════════════
+    //  Backend relay: updateExpenseFor
+    // ══════════════════════════════════════════════
+
+    function test_updateExpenseFor_success() public {
+        vm.prank(alice);
+        uint256 expenseId = expensesContract.addExpense(groupId, dataHash, encryptedData);
+
+        bytes32 newHash = keccak256("updated expense");
+        bytes memory newData = hex"ffff";
+
+        vm.warp(block.timestamp + 100);
+        vm.prank(backend);
+        vm.expectEmit(true, true, true, true);
+        emit khaaliSplitExpenses.ExpenseUpdated(groupId, expenseId, alice, newHash, newData);
+        expensesContract.updateExpenseFor(alice, expenseId, newHash, newData);
+
+        (uint256 gId, address creator, bytes32 dHash, uint256 ts) =
+            expensesContract.getExpense(expenseId);
+
+        assertEq(gId, groupId);
+        assertEq(creator, alice);
+        assertEq(dHash, newHash);
+        assertEq(ts, block.timestamp);
+    }
+
+    function test_updateExpenseFor_notBackend_reverts() public {
+        vm.prank(alice);
+        uint256 expenseId = expensesContract.addExpense(groupId, dataHash, encryptedData);
+
+        vm.prank(alice);
+        vm.expectRevert(khaaliSplitExpenses.NotBackend.selector);
+        expensesContract.updateExpenseFor(alice, expenseId, keccak256("x"), hex"00");
+    }
+
+    function test_updateExpenseFor_notCreator_reverts() public {
+        vm.prank(alice);
+        uint256 expenseId = expensesContract.addExpense(groupId, dataHash, encryptedData);
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                khaaliSplitExpenses.NotExpenseCreator.selector,
+                expenseId,
+                bob
+            )
+        );
+        expensesContract.updateExpenseFor(bob, expenseId, keccak256("x"), hex"00");
+    }
+
+    function test_updateExpenseFor_doesNotExist_reverts() public {
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(khaaliSplitExpenses.ExpenseDoesNotExist.selector, 999)
+        );
+        expensesContract.updateExpenseFor(alice, 999, keccak256("x"), hex"00");
+    }
+
+    function test_updateExpenseFor_notGroupMember_reverts() public {
+        // Bob adds expense, then leaves group, then tries to update via relay
+        vm.prank(bob);
+        uint256 expenseId = expensesContract.addExpense(groupId, dataHash, encryptedData);
+
+        vm.prank(bob);
+        groupsContract.leaveGroup(groupId);
+
+        vm.prank(backend);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                khaaliSplitExpenses.NotGroupMember.selector,
+                groupId,
+                bob
+            )
+        );
+        expensesContract.updateExpenseFor(bob, expenseId, keccak256("x"), hex"00");
+    }
+
+    function test_updateExpenseFor_originalStillWorks() public {
+        vm.prank(alice);
+        uint256 expenseId = expensesContract.addExpense(groupId, dataHash, encryptedData);
+
+        vm.prank(alice);
+        expensesContract.updateExpense(expenseId, keccak256("updated"), hex"ff");
+        (, , bytes32 dHash, ) = expensesContract.getExpense(expenseId);
+        assertEq(dHash, keccak256("updated"));
+    }
+
+    // ══════════════════════════════════════════════
+    //  Admin (Expenses)
+    // ══════════════════════════════════════════════
+
+    function test_setBackend_expenses_success() public {
+        address newBackend = makeAddr("newBackend");
+        vm.prank(owner);
+        expensesContract.setBackend(newBackend);
+        assertEq(expensesContract.backend(), newBackend);
+    }
+
+    function test_setBackend_expenses_notOwner_reverts() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        expensesContract.setBackend(alice);
     }
 
     // ──────────────────────────────────────────────

@@ -1,0 +1,45 @@
+[
+  {
+    "type": "event",
+    "name": "BackendUpdated",
+    "inputs": [
+      { "name": "newBackend", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ReputationUpdated",
+    "inputs": [
+      { "name": "user", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "newScore", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "wasSuccess", "type": "bool", "indexed": false, "internalType": "bool" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SettlementContractUpdated",
+    "inputs": [
+      { "name": "newSettlementContract", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubnameRegistryUpdated",
+    "inputs": [
+      { "name": "newSubnameRegistry", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UserNodeSet",
+    "inputs": [
+      { "name": "user", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "node", "type": "bytes32", "indexed": true, "internalType": "bytes32" }
+    ],
+    "anonymous": false
+  }
+]

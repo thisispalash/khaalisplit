@@ -48,6 +48,9 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
     /// @notice Encrypted group AES key per member: encryptedGroupKey[groupId][user].
     mapping(uint256 => mapping(address => bytes)) public encryptedGroupKey;
 
+    /// @notice Authorized backend / relayer address.
+    address public backend;
+
     // ──────────────────────────────────────────────
     //  Events
     // ──────────────────────────────────────────────
@@ -69,6 +72,7 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
     error NotInvited(uint256 groupId, address user);
     error GroupDoesNotExist(uint256 groupId);
     error CreatorCannotLeave(uint256 groupId);
+    error NotBackend();
 
     // ──────────────────────────────────────────────
     //  Initializer
@@ -178,6 +182,85 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
     }
 
     // ──────────────────────────────────────────────
+    //  Backend relay: group operations
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Backend relay: create a group on behalf of `user`.
+     * @param user         The address creating the group.
+     * @param nameHash     Keccak256 of the group name.
+     * @param encryptedKey The group AES key encrypted for the creator's ECDH pubkey.
+     * @return groupId     The newly created group's ID.
+     */
+    function createGroupFor(address user, bytes32 nameHash, bytes calldata encryptedKey) external returns (uint256 groupId) {
+        if (msg.sender != backend) revert NotBackend();
+        if (!friendRegistry.registered(user)) revert NotRegistered(user);
+
+        groupId = ++groupCount;
+        groups[groupId] = Group({ nameHash: nameHash, creator: user, memberCount: 1 });
+        isMember[groupId][user] = true;
+        _memberList[groupId].push(user);
+        encryptedGroupKey[groupId][user] = encryptedKey;
+
+        emit GroupCreated(groupId, user, nameHash);
+    }
+
+    /**
+     * @notice Backend relay: invite a member on behalf of `inviter`.
+     * @param inviter      The address doing the inviting (must be a group member).
+     * @param groupId      The group to invite into.
+     * @param member       The address to invite.
+     * @param encryptedKey The group AES key encrypted for the invitee's ECDH pubkey.
+     */
+    function inviteMemberFor(address inviter, uint256 groupId, address member, bytes calldata encryptedKey) external {
+        if (msg.sender != backend) revert NotBackend();
+        if (groups[groupId].creator == address(0)) revert GroupDoesNotExist(groupId);
+        if (!isMember[groupId][inviter]) revert NotGroupMember(groupId, inviter);
+        if (!friendRegistry.isFriend(inviter, member)) revert NotFriends(inviter, member);
+        if (isMember[groupId][member]) revert AlreadyMember(groupId, member);
+        if (isInvited[groupId][member]) revert AlreadyInvited(groupId, member);
+
+        isInvited[groupId][member] = true;
+        encryptedGroupKey[groupId][member] = encryptedKey;
+
+        emit MemberInvited(groupId, inviter, member);
+    }
+
+    /**
+     * @notice Backend relay: accept a group invite on behalf of `user`.
+     * @param user    The address accepting the invite.
+     * @param groupId The group to accept the invite for.
+     */
+    function acceptGroupInviteFor(address user, uint256 groupId) external {
+        if (msg.sender != backend) revert NotBackend();
+        if (!isInvited[groupId][user]) revert NotInvited(groupId, user);
+
+        isInvited[groupId][user] = false;
+        isMember[groupId][user] = true;
+        _memberList[groupId].push(user);
+        groups[groupId].memberCount++;
+
+        emit MemberAccepted(groupId, user);
+    }
+
+    /**
+     * @notice Backend relay: leave a group on behalf of `user`.
+     * @param user    The address leaving the group.
+     * @param groupId The group to leave.
+     */
+    function leaveGroupFor(address user, uint256 groupId) external {
+        if (msg.sender != backend) revert NotBackend();
+        if (!isMember[groupId][user]) revert NotGroupMember(groupId, user);
+        if (groups[groupId].creator == user) revert CreatorCannotLeave(groupId);
+
+        isMember[groupId][user] = false;
+        groups[groupId].memberCount--;
+        delete encryptedGroupKey[groupId][user];
+
+        emit MemberLeft(groupId, user);
+    }
+
+    // ──────────────────────────────────────────────
     //  Views
     // ──────────────────────────────────────────────
 
@@ -195,6 +278,17 @@ contract khaaliSplitGroups is Initializable, UUPSUpgradeable, OwnableUpgradeable
      */
     function getGroupCreator(uint256 groupId) external view returns (address) {
         return groups[groupId].creator;
+    }
+
+    // ──────────────────────────────────────────────
+    //  Admin
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Updates the authorized backend address.
+     */
+    function setBackend(address _backend) external onlyOwner {
+        backend = _backend;
     }
 
     // ──────────────────────────────────────────────
