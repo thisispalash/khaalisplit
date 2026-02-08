@@ -28,7 +28,10 @@
     <script src="{% static 'js/htmx@2.0.8.js' %}"></script>
     <script src="{% static 'js/htmx-ext-ws@2.0.4.js' %}"></script>
     <script src="{% static 'js/_hyperscript@0.9.14.js' %}"></script>
-    <script src="{% static 'js/ethers@6.7.0.js' %}"></script>
+    <script type="module">
+      import * as ethers from '{% static "js/ethers@6.7.0.js" %}';
+      window.ethers = ethers;
+    </script>
 
     {% block extra_head %}{% endblock %}
   </head>
