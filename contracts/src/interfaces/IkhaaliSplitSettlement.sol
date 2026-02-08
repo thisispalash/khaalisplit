@@ -50,6 +50,14 @@ interface IkhaaliSplitSettlement {
     /// @param memo Arbitrary data (e.g. encrypted memo for off-chain indexing).
     function settle(address recipient, uint256 amount, bytes calldata memo) external;
 
+    /// @notice EIP-3009 authorization parameters.
+    struct Authorization {
+        address from;
+        uint256 validAfter;
+        uint256 validBefore;
+        bytes32 nonce;
+    }
+
     /// @notice Primary settlement function using EIP-3009 authorization.
     ///         Pulls USDC from sender via receiveWithAuthorization, reads recipient's
     ///         payment preferences from ENS text records, routes via Gateway or CCTP,
@@ -57,17 +65,13 @@ interface IkhaaliSplitSettlement {
     /// @param recipient    The recipient's wallet address.
     /// @param amount       The USDC amount to settle.
     /// @param memo         Arbitrary data (e.g. encrypted memo for off-chain indexing).
-    /// @param validAfter   EIP-3009 validity window start (unix timestamp).
-    /// @param validBefore  EIP-3009 validity window end (unix timestamp).
-    /// @param nonce        EIP-3009 random nonce (bytes32).
+    /// @param auth         EIP-3009 authorization parameters.
     /// @param signature    EIP-3009 signature (packed r, s, v).
     function settleWithAuthorization(
         address recipient,
         uint256 amount,
         bytes calldata memo,
-        uint256 validAfter,
-        uint256 validBefore,
-        bytes32 nonce,
+        Authorization calldata auth,
         bytes calldata signature
     ) external;
 
