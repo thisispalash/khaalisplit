@@ -1,0 +1,40 @@
+[
+  {
+    "type": "event",
+    "name": "GroupCreated",
+    "inputs": [
+      { "name": "groupId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "creator", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "nameHash", "type": "bytes32", "indexed": false, "internalType": "bytes32" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MemberAccepted",
+    "inputs": [
+      { "name": "groupId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "member", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MemberInvited",
+    "inputs": [
+      { "name": "groupId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "inviter", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "invitee", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MemberLeft",
+    "inputs": [
+      { "name": "groupId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "member", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  }
+]

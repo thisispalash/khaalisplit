@@ -1,0 +1,47 @@
+[
+  {
+    "type": "event",
+    "name": "AddrRecordSet",
+    "inputs": [
+      { "name": "node", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
+      { "name": "addr", "type": "address", "indexed": false, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "BackendUpdated",
+    "inputs": [
+      { "name": "newBackend", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ReputationContractUpdated",
+    "inputs": [
+      { "name": "newReputationContract", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubnameRegistered",
+    "inputs": [
+      { "name": "node", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
+      { "name": "label", "type": "string", "indexed": false, "internalType": "string" },
+      { "name": "owner", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TextRecordSet",
+    "inputs": [
+      { "name": "node", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
+      { "name": "key", "type": "string", "indexed": false, "internalType": "string" },
+      { "name": "value", "type": "string", "indexed": false, "internalType": "string" }
+    ],
+    "anonymous": false
+  }
+]

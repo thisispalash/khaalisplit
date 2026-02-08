@@ -1,0 +1,26 @@
+[
+  {
+    "type": "event",
+    "name": "SignerAdded",
+    "inputs": [
+      { "name": "signer", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SignerRemoved",
+    "inputs": [
+      { "name": "signer", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UrlUpdated",
+    "inputs": [
+      { "name": "newUrl", "type": "string", "indexed": false, "internalType": "string" }
+    ],
+    "anonymous": false
+  }
+]

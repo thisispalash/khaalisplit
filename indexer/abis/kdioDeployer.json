@@ -1,0 +1,12 @@
+[
+  {
+    "type": "event",
+    "name": "Deployed",
+    "inputs": [
+      { "name": "proxy", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "salt", "type": "bytes32", "indexed": true, "internalType": "bytes32" },
+      { "name": "implementation", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  }
+]

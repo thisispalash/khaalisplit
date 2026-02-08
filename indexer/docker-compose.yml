@@ -1,0 +1,58 @@
+# khaaliSplit Indexer
+#
+# Profiles:
+#   dev  :: bind mount + trace logging
+#   prod :: baked image, restart always, resource limits
+#
+# Usage:
+#   COMPOSE_PROFILES=dev docker compose up -d
+#   COMPOSE_PROFILES=prod docker compose up -d
+
+services:
+
+  # ---------------- dev ----------------------------------------------------- #
+  khaalisplit_indexer_dev:
+    container_name: khaalisplit_indexer_dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["dev"]
+    env_file: .env
+    environment:
+      ENVIO_INDEXER_HOST: "0.0.0.0"
+      ENVIO_INDEXER_PORT: "9898"
+      LOG_LEVEL: "trace"
+      LOG_STRATEGY: "console-pretty"
+      TUI_OFF: "true"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - kdio_network
+
+  # ---------------- prod ---------------------------------------------------- #
+  khaalisplit_indexer:
+    container_name: khaalisplit_indexer
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["prod"]
+    env_file: .env
+    environment:
+      ENVIO_INDEXER_HOST: "0.0.0.0"
+      ENVIO_INDEXER_PORT: "9898"
+      LOG_LEVEL: "info"
+      LOG_STRATEGY: "console-pretty"
+      TUI_OFF: "true"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.8"
+          memory: 800M
+    networks:
+      - kdio_network
+
+networks:
+  kdio_network:
+    external: true

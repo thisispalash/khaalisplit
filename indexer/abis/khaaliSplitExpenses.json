@@ -1,0 +1,26 @@
+[
+  {
+    "type": "event",
+    "name": "ExpenseAdded",
+    "inputs": [
+      { "name": "groupId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "expenseId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "creator", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "dataHash", "type": "bytes32", "indexed": false, "internalType": "bytes32" },
+      { "name": "encryptedData", "type": "bytes", "indexed": false, "internalType": "bytes" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ExpenseUpdated",
+    "inputs": [
+      { "name": "groupId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "expenseId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "creator", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "dataHash", "type": "bytes32", "indexed": false, "internalType": "bytes32" },
+      { "name": "encryptedData", "type": "bytes", "indexed": false, "internalType": "bytes" }
+    ],
+    "anonymous": false
+  }
+]

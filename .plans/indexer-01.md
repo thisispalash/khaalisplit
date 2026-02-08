@@ -1093,3 +1093,119 @@ Common issues to watch for:
 - Django app integration (covered in `application-03.md`)
 - Hasura metadata/permissions configuration
 - Production monitoring/alerting
+
+---
+
+## Implementation Notes (Session 1)
+
+### Envio version
+- Plan specified `envio@^2.26.0`, installed `envio@2.32.3`. No breaking changes.
+
+### Critical: `optionalDependencies` for `generated` module
+- The plan's `package.json` was missing `"optionalDependencies": { "generated": "./generated" }`.
+- Without this, `import { USDC } from "generated"` fails at runtime with `Cannot find module 'generated'`.
+- The `generated/` directory has `"name": "generated"` in its `package.json` — pnpm links it into `node_modules/generated` via the optional dep.
+- Found by checking Envio's own [local-docker-example](https://github.com/enviodev/local-docker-example/blob/main/package.json).
+
+### Critical: `field_selection` required for `event.transaction.hash`
+- In Envio v2.11+, `Transaction_t` is **empty by default** (`{}`). Fields must be opted into via `field_selection` in `config.yaml`.
+- `Block_t` always has `number`, `timestamp`, `hash` — no opt-in needed.
+- Added to config.yaml:
+  ```yaml
+  field_selection:
+    transaction_fields:
+      - hash
+  ```
+- This applies globally. Session 2 config must also include this.
+
+### Database name is lowercase
+- The plan references `khaaliSplit_db` but the actual database on the shared Postgres is `khaalisplit_db` (all lowercase).
+- Updated `.env` and `.env.example` to use `khaalisplit_db`.
+
+### Hasura table tracking warning (expected)
+- On startup, Envio tries to track tables (`USDCTransfer`, `raw_events`, `_meta`, `chain_metadata`) in Hasura.
+- This fails with `"invalid-configuration"` because the shared Hasura's default source doesn't point at the `envio` schema in `khaalisplit_db`.
+- The indexer logs this as a WARNING and continues — **indexing works fine**, but GraphQL queries via Hasura won't work until the Hasura source is configured to use the `envio` schema.
+- This is out of scope for the indexer (covered in VPS orchestration / Hasura metadata config).
+
+### Docker dev mode with bind mount
+- The Dockerfile runs `pnpm envio codegen` during build, so the baked image has `generated/` correctly.
+- Dev mode bind-mounts `.:/app` and uses an anonymous volume for `/app/node_modules`.
+- The bind mount means the host's `generated/` (from local codegen) is used, which works because the symlink in `node_modules/generated` → `../generated` resolves correctly.
+
+### USDC test start_block
+- Used `10217500` (~100 blocks behind Sepolia head at time of implementation).
+- Indexed **656 Transfer events** within the first ~450 blocks as validation.
+
+### Session 1 Verification Results
+
+| Check | Result |
+|---|---|
+| ABIs are valid JSON arrays | ✅ All 9 ABIs valid |
+| codegen succeeds | ✅ 124/124 ReScript files compiled |
+| Docker config valid | ✅ `docker compose --profile dev config` |
+| Docker builds | ✅ Image built with codegen inside container |
+| Indexer starts and syncs | ✅ HyperSync connected, blocks processed |
+| Data in Postgres | ✅ 656+ `USDCTransfer` rows in `envio."USDCTransfer"` |
+| Hasura shows data | ⚠️ Hasura source not configured for `envio` schema (expected, out of scope) |
+
+---
+
+## Implementation Notes (Session 2)
+
+### Generated type names are PascalCase
+- The plan assumed `khaaliSplitFriends` (camelCase) as the import name from `"generated"`.
+- Envio codegen converts contract names to PascalCase: `KhaaliSplitFriends`, `KhaaliSplitGroups`, `KhaaliSplitSettlement`, `KdioDeployer`, etc.
+- The plan's `import { khaaliSplitFriends } from "generated"` became `import { KhaaliSplitFriends } from "generated"`.
+
+### Relation fields use `_id` suffix
+- Schema declares `group: Group!` on `GroupMember` and `Expense`, and `subname: Subname!` on `TextRecord`.
+- Envio codegen flattens these to `group_id: id` and `subname_id: id` (string) in the entity types.
+- Handlers must set `group_id: groupId` (not `group: groupId`).
+
+### `DomainConfigured.domain` is `bigint`, entity expects `number`
+- `uint32 domain` in the ABI maps to `bigint` in `event.params.domain`.
+- Schema defines `domain: Int!` → entity type has `domain: number`.
+- Fixed with `Number(event.params.domain)` cast. Safe because uint32 fits in JS number.
+
+### `DomainConfigured.chainId` event param vs `event.chainId`
+- The `DomainConfigured(uint256 indexed chainId, uint32 domain)` event has a `chainId` param that represents the **target chain**.
+- `event.chainId` represents the **source chain** (where the event was emitted).
+- Handler correctly maps `sourceChainId = event.chainId` and `targetChainId = Number(event.params.chainId)`.
+
+### Admin/config events with no entity
+- 5 events are logged but don't create entities: `Subnames.BackendUpdated`, `Subnames.ReputationContractUpdated`, `Reputation.BackendUpdated`, `Reputation.SubnameRegistryUpdated`, `Reputation.SettlementContractUpdated`.
+- These use `context.log.info()` for observability without DB writes.
+- Settlement's config update events (`TokenMessengerUpdated`, `GatewayWalletUpdated`, etc.) DO create `SettlementConfig` entities because they're useful for tracking cross-chain configuration.
+
+### `start_block` set to `10215968` for all chains
+- User provided a single `start_block: 10215968` for all networks.
+- Applied at the network level (not per-contract) in config.yaml.
+- Note: this is a Sepolia block number. L2 chains (Base Sepolia, Arbitrum Sepolia, Optimism Sepolia, Arc Testnet) have different block numbering — the actual deployment blocks on those chains may differ. This should work fine for initial indexing since blocks before the deployment will simply have no matching events.
+
+### `unordered_multichain_mode: true`
+- Added as planned for Settlement contract across 5 chains.
+- This allows events from different chains to be processed without strict ordering.
+
+### Address normalization
+- All addresses are lowercased via the `addr()` helper before storage.
+- `event.params.*` addresses come as `Address_t` (hex string) from HyperSync — may already be checksummed, so `.toLowerCase()` ensures consistency.
+
+### Upsert pattern for updates
+- Handlers that update existing entities (FriendAccepted, FriendRemoved, MemberAccepted, MemberLeft, ExpenseUpdated, TokenRemoved, SignerRemoved, ReputationUpdated) use `context.Entity.get(id)` to load the existing record.
+- If the existing record is not found (e.g., missed the creation event), fallback values are used to create a valid entity anyway.
+- `ReputationUpdated` increments `totalSettlements`, `successfulSettlements`, and `failedSettlements` counters, starting from 0 if no prior record exists.
+
+### TypeScript type checking
+- `npx tsc --noEmit --skipLibCheck` reports 0 errors in `src/EventHandlers.ts`.
+- The remaining errors are in Envio's generated ReScript bindings (`require` not found) — expected and irrelevant at runtime.
+
+### Session 2 Verification Results
+
+| Check | Result |
+|---|---|
+| codegen succeeds with full schema | ✅ 124/124 ReScript files compiled |
+| TypeScript compiles (handlers only) | ✅ 0 type errors in `src/EventHandlers.ts` |
+| Handler count | ✅ 33 event handlers registered (4+4+2+9+5+5+3+1) |
+| Entity count | ✅ 18 entity types in schema |
+| Contracts indexed | ✅ 8 contracts across 5 chains |

@@ -1,0 +1,80 @@
+[
+  {
+    "type": "event",
+    "name": "DomainConfigured",
+    "inputs": [
+      { "name": "chainId", "type": "uint256", "indexed": true, "internalType": "uint256" },
+      { "name": "domain", "type": "uint32", "indexed": false, "internalType": "uint32" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GatewayMinterUpdated",
+    "inputs": [
+      { "name": "newGatewayMinter", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GatewayWalletUpdated",
+    "inputs": [
+      { "name": "newGatewayWallet", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ReputationContractUpdated",
+    "inputs": [
+      { "name": "newReputationContract", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SettlementCompleted",
+    "inputs": [
+      { "name": "sender", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "recipient", "type": "address", "indexed": true, "internalType": "address" },
+      { "name": "token", "type": "address", "indexed": false, "internalType": "address" },
+      { "name": "amount", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "senderReputation", "type": "uint256", "indexed": false, "internalType": "uint256" },
+      { "name": "memo", "type": "bytes", "indexed": false, "internalType": "bytes" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubnameRegistryUpdated",
+    "inputs": [
+      { "name": "newSubnameRegistry", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TokenAdded",
+    "inputs": [
+      { "name": "token", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TokenMessengerUpdated",
+    "inputs": [
+      { "name": "newTokenMessenger", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TokenRemoved",
+    "inputs": [
+      { "name": "token", "type": "address", "indexed": true, "internalType": "address" }
+    ],
+    "anonymous": false
+  }
+]
