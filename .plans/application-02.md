@@ -5,14 +5,69 @@ Refactor the Django + HTMX + Tailwind v4 UI from ad-hoc inline styling with dupl
 
 ---
 
-## Phase 1: Design Token System
+## Dependency Graph
 
-**Rewrite** `app/static/css/tw-in.css`
+```
+Session 1: Foundation + Building Blocks
+  tw-in.css ──► quanta/ ──► photons/
+       │              │           │
+       └──► form widget cleanup   │
+                                  │
+Session 2: Composed UI            │
+  lenses/ ◄──────────────────────┘
+     │
+  prisms/ ◄── lenses/ + quanta/ + photons/
+     │
+  base.html ◄── prisms/ (nav-header, bottom-nav, footer)
+     │
+  pages/ ◄── base.html + prisms/ + lenses/
 
-All semantic colors are derived purely from mixing the two base OKLCH colors at different ratios. No red, yellow, blue, or purple — just different shades of green-on-black.
+Session 3: Backend Wiring + Cleanup
+  context_processors.py (active_tab for bottom-nav)
+  web/views.py (template paths → pages/)
+  api/views/*.py (partial paths → lenses/, prisms/)
+  delete old templates
+  merge m/ app
+```
+
+Nothing in Session 2 works without Session 1. Nothing in Session 3 works without Session 2.
+
+---
+
+# SESSION 1: Foundation + Building Blocks
+
+**Goal:** Design tokens, fonts, form cleanup, all quanta, all photons. After this session, the component library exists but isn't wired into any pages yet. Existing pages still work (they use old templates).
+
+**Commit after this session.**
+
+## 1.1 Rewrite `tw-in.css` — Design Token System
+
+**File:** `app/static/css/tw-in.css`
 
 ```css
 @import "tailwindcss";
+
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("/static/font/NunitoSans.ttf") format("truetype");
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("/static/font/NunitoSansItalic.ttf") format("truetype");
+  font-weight: 200 1000;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Syne Mono";
+  src: url("/static/font/SyneMono.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 @theme {
   /* ── Base Colors (unchanged) ─────────────────────────────────── */
@@ -89,12 +144,12 @@ All semantic colors are derived purely from mixing the two base OKLCH colors at 
 }
 ```
 
-**Status color strategy:** Instead of red/yellow/blue, statuses are communicated through **contrast intensity**:
-- **High emphasis** (confirmed, success, accepted): `text-emphasis` / `bg-emphasis-muted` — bright green, near foreground
-- **Foreground** (errors, destructive): `text-foreground` on `bg-accent-muted` — maximum contrast draws attention
-- **Muted** (pending, invited, bridging): `text-muted` / `bg-surface-raised` — mid-tone green
-- **Dim** (left, inactive, disabled): `text-dim` / `bg-dim-muted` — faded green
-- **Subtle** (timestamps, placeholders): `text-subtle` — almost invisible
+**Status color strategy (contrast intensity, not hue):**
+- **High emphasis** (confirmed, accepted): `text-emphasis` / `bg-emphasis-muted`
+- **Foreground** (errors, destructive): `text-foreground` on `bg-accent-muted`
+- **Muted** (pending, invited, bridging): `text-muted` / `bg-surface-raised`
+- **Dim** (left, inactive): `text-dim` / `bg-dim-muted`
+- **Subtle** (timestamps, placeholders): `text-subtle`
 
 **Old → new mapping:**
 | Old Pattern | New Token |
@@ -115,64 +170,27 @@ All semantic colors are derived purely from mixing the two base OKLCH colors at 
 | `text-blue-400`, info | `text-muted` |
 | `text-purple-400`, bridging | `text-muted` + `animate-pulse-soft` |
 
----
+## 1.2 Add Google Fonts fallback to `base.html`
 
-## Phase 2: Self-Hosted Fonts + Strip Form Widget Classes
-
-### 2a. Fonts (already downloaded to `app/static/font/`)
-
-Files already in place:
-- `NunitoSans.ttf` (variable weight, normal)
-- `NunitoSansItalic.ttf` (variable weight, italic)
-- `SyneMono.ttf` (regular weight)
-
-Add `@font-face` declarations in `tw-in.css` **before** the `@theme` block (industry standard for self-hosted):
-
-```css
-@font-face {
-  font-family: "Nunito Sans";
-  src: url("/static/font/NunitoSans.ttf") format("truetype");
-  font-weight: 200 1000;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Nunito Sans";
-  src: url("/static/font/NunitoSansItalic.ttf") format("truetype");
-  font-weight: 200 1000;
-  font-style: italic;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Syne Mono";
-  src: url("/static/font/SyneMono.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-```
-
-Also add Google Fonts `<link>` in `base.html` as network fallback:
+Add inside `<head>` before the Tailwind CSS `<link>`:
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Syne+Mono&display=swap" rel="stylesheet">
 ```
 
-### 2b. Strip `class` attrs from Django form widgets
+## 1.3 Strip `class` attrs from Django form widgets
 
-Since `@layer base` now styles all form elements globally, remove all `'class': '...'` from widget attrs. Keep `placeholder`, `autocomplete`, `step`, `min`.
+Remove all `'class': '...'` from widget attrs. The `@layer base` CSS handles styling globally now. Keep `placeholder`, `autocomplete`, `step`, `min`.
 
 **Files:**
 - `app/api/forms/auth.py` — 5 widget `class` strings (SignupForm, LoginForm, ProfileForm)
 - `app/api/forms/expenses.py` — `WIDGET_CLASSES` constant + 4 usages
 - `app/api/forms/groups.py` — 1 widget `class` string
 
----
+## 1.4 Create Quanta (Stateless Primitives)
 
-## Phase 3: Quanta — Stateless Primitives
-
-Create `app/templates/quanta/`. All parameterized via `{% include 'quanta/X.html' with key=val %}`. Default size for all: `md`.
+Create `app/templates/quanta/` — 11 files. All parameterized via `{% include 'quanta/X.html' with key=val %}`. Default size: `md`.
 
 ### `quanta/button.html`
 | Param | Values | Default |
@@ -189,7 +207,7 @@ Create `app/templates/quanta/`. All parameterized via `{% include 'quanta/X.html
 Variant classes:
 - `primary`: `bg-foreground text-background hover:bg-foreground/90`
 - `secondary`: `border border-border text-muted hover:text-foreground hover:border-border-hover`
-- `danger`: `bg-foreground text-background hover:bg-foreground/90 font-bold` (same as primary but bold — urgency via weight, not color)
+- `danger`: `bg-foreground text-background hover:bg-foreground/90 font-bold`
 - `ghost`: `text-subtle hover:text-foreground`
 
 ### `quanta/badge.html`
@@ -199,7 +217,7 @@ Variant classes:
 | `label` | string |
 | `pulse` | `"true"` for animated |
 
-Class mapping (all green-on-black shades):
+Class mapping:
 - `pending`/`invited`/`submitted`: `text-muted bg-surface-raised`
 - `bridging`: `text-muted bg-surface-raised animate-pulse-soft`
 - `confirmed`/`accepted`: `text-emphasis bg-emphasis-muted`
@@ -213,7 +231,6 @@ Replaces: `partials/loading.html`
 ### `quanta/toast.html`
 Params: `message`, `type` (`success`/`error`/`info`), `toast_id`
 Keeps: `hx-swap-oob` pattern + Hyperscript auto-dismiss
-Type mapping:
 - `error`: `bg-accent-muted text-foreground border border-foreground font-medium`
 - `success`: `bg-emphasis-muted text-emphasis border border-emphasis`
 - `info`: `bg-surface-raised text-foreground border border-border`
@@ -223,36 +240,29 @@ Params: `variant` (`line`/`card`/`avatar`), `lines` (default 3)
 
 ### `quanta/address.html`
 Params: `address`
-Renders: `<span class="font-mono text-sm text-subtle">{{ address|truncatechars:14 }}</span>`
 
 ### `quanta/amount.html`
 Params: `value`, `token` (default "USDC"), `size` (`sm`/`md`)
-Renders: `<span class="font-mono text-sm font-medium">{{ value }} USDC</span>`
 
 ### `quanta/icon.html`
 Params: `name` (`expense`, `settlement`, `friend`, `group`, `wallet`, `info`, `arrow-right`, `arrow-left`, `activity`), `size` (`sm`/`md`/`lg`)
-Centralizes the 6 inline SVGs from `activity_item.html`
 
 ### `quanta/empty-state.html`
 Params: `title`, `subtitle`, `actions` (safe HTML)
 
 ### `quanta/input.html`
 Params: `name`, `type`, `placeholder`, `label`, `error`, `helper`, `mono`, `extra_attrs`
-For manual `<input>` tags in templates (not Django form fields)
 
 ### `quanta/select.html`
 Params: `name`, `label`, `options`, `error`
-For manual `<select>` tags
 
----
+## 1.5 Create Photons (Stateful Composites)
 
-## Phase 4: Photons — Stateful Composites
-
-Create `app/templates/photons/`. These require Django template context.
+Create `app/templates/photons/` — 7 files.
 
 ### `photons/form-field.html`
 Context: `field` (bound form field), `label`, `helper`
-Replaces: 12 instances of the `<div><label>{{ form.X }}{% if errors %}` pattern
+Replaces: 12 instances of the label+field+error pattern
 
 ### `photons/form-errors.html`
 Context: `errors` (form.non_field_errors)
@@ -261,7 +271,6 @@ Replaces: 4 inline error blocks
 ### `photons/user-pill.html`
 Context: `user` object (`.subname`, `.display_name`, `.avatar_url`)
 Params: `link` (`"true"`/`"false"`), `size`
-Renders: avatar initial + monospace subname + optional display name
 
 ### `photons/wallet-button.html`
 Context: `user.is_authenticated`
@@ -269,74 +278,92 @@ Extracted from: `components/header.html` wallet button + Hyperscript
 
 ### `photons/search-bar.html`
 Params: `name`, `placeholder`, `hx_get`, `hx_target`
-Renders: debounced HTMX search input
 
 ### `photons/debt-arrow.html`
 Context: `from_subname`, `to_subname`, `from_address`, `to_address`, `is_payer`, `is_payee`
-Uses `quanta/icon.html` + `quanta/address.html`
-Payer gets `text-foreground` (emphasis = they owe), payee gets `text-emphasis`
 
 ### `photons/step-indicator.html`
 Params: `current` (int), `total` (int, default 2)
 
----
+## 1.6 Verification (Session 1)
 
-## Phase 5: Lenses — Cards
-
-Create `app/templates/lenses/`.
-
-| File | Context | Replaces |
-|------|---------|----------|
-| `lenses/activity-card.html` | `activity` | `activity/partials/activity_item.html` |
-| `lenses/friend-card.html` | `friend_user`, `status` | `friends/partials/friend_card.html` |
-| `lenses/group-card.html` | `group` | `groups/partials/group_card.html` |
-| `lenses/expense-card.html` | `expense` | `expenses/partials/expense_card.html` (preserves Hyperscript decryption) |
-| `lenses/settlement-card.html` | `settlement` | `settlement/partials/settlement_status.html` (preserves HTMX polling) |
-| `lenses/invite-card.html` | `group` (invited) | inline invite block in `groups/list.html` |
-
-All cards use `border border-border rounded-md` base. No colored borders — distinguish via text weight and brightness.
+1. `make tailwind` — tw.css builds without errors
+2. `make server` — Django starts (existing templates still work since we haven't changed template paths)
+3. Verify fonts render on existing pages (Nunito Sans body, Syne Mono where `font-mono` used)
+4. Verify form inputs styled correctly (no widget classes, base CSS applies)
+5. Confirm new template dirs exist: `quanta/`, `photons/`
 
 ---
 
-## Phase 6: Prisms — Sections
+# SESSION 2: Composed UI — Lenses, Prisms, Base, Pages
 
-Create `app/templates/prisms/`.
+**Depends on:** Session 1 complete (quanta/ and photons/ must exist).
+
+**Goal:** Build the full composed UI. Lenses use quanta+photons. Prisms use lenses+quanta+photons. The unified base template uses prisms. Pages use everything. After this session, the new template tree is complete but not yet wired to Django views.
+
+**Commit after this session.**
+
+## 2.1 Create Lenses (Cards)
+
+Create `app/templates/lenses/` — 6 files.
+
+| File | Context | Replaces | Composes |
+|------|---------|----------|----------|
+| `lenses/activity-card.html` | `activity` | `activity/partials/activity_item.html` | `quanta/icon.html`, `quanta/address.html` |
+| `lenses/friend-card.html` | `friend_user`, `status` | `friends/partials/friend_card.html` | `photons/user-pill.html`, `quanta/badge.html`, `quanta/button.html` |
+| `lenses/group-card.html` | `group` | `groups/partials/group_card.html` | — |
+| `lenses/expense-card.html` | `expense` | `expenses/partials/expense_card.html` | `quanta/badge.html`, `quanta/amount.html` (preserves Hyperscript decryption) |
+| `lenses/settlement-card.html` | `settlement` | `settlement/partials/settlement_status.html` | `quanta/badge.html`, `quanta/address.html`, `quanta/amount.html` (preserves HTMX polling) |
+| `lenses/invite-card.html` | `group` (invited) | inline invite block in `groups/list.html` | `quanta/button.html` |
+
+All cards: `border border-border rounded-md` base. No colored borders.
+
+## 2.2 Create Prisms (Sections)
+
+Create `app/templates/prisms/` — 8 files.
 
 ### `prisms/nav-header.html`
 Desktop only (`hidden md:block`). Logo + nav links + wallet button + logout.
+**Composes:** `photons/wallet-button.html`
 Replaces: `components/header.html`
 
 ### `prisms/bottom-nav.html`
 Mobile only (`md:hidden`, `fixed bottom-0`). 4 tabs: Activity, Friends, Groups, Profile.
-Requires: `active_tab` in context (via context processor).
+**Composes:** `quanta/icon.html`
+**Requires:** `active_tab` in context (wired in Session 3).
 
 ### `prisms/footer.html`
 Desktop only (`hidden md:block`). Tagline + GitHub.
 Replaces: `components/footer.html`
 
 ### `prisms/activity-feed.html`
-HTMX load wrapper with skeleton fallback (replaces spinner).
+HTMX load wrapper with skeleton fallback.
+**Composes:** `quanta/skeleton.html`
 
 ### `prisms/friend-list.html`
-Search + pending + friends list.
+Search + pending + friends.
+**Composes:** `photons/search-bar.html`, `lenses/friend-card.html`
 
 ### `prisms/group-members.html`
 Invite form + HTMX member list.
+**Composes:** `photons/user-pill.html`, `quanta/badge.html`
 
 ### `prisms/group-expenses.html`
 Expense form + expense list.
+**Composes:** `photons/form-field.html`, `lenses/expense-card.html`
 
 ### `prisms/balance-summary.html`
 HTMX-loaded balance/debt section.
+**Composes:** `photons/debt-arrow.html`
 
----
+## 2.3 Rewrite Unified Base Template
 
-## Phase 7: Unified Base Template
+**File:** `app/templates/base.html`
 
-**Rewrite** `app/templates/base.html`:
+Changes:
 - Merge PWA meta from `base_mobile.html`
-- Add `@font-face` fallback links
-- Add `font-sans` on `<body>`
+- Add Google Fonts `<link>` fallback
+- Add `font-sans` class on `<body>`
 - `{% include 'prisms/nav-header.html' %}` (desktop)
 - `{% include 'prisms/footer.html' %}` (desktop)
 - `{% include 'prisms/bottom-nav.html' %}` (mobile)
@@ -344,30 +371,45 @@ HTMX-loaded balance/debt section.
 
 **Delete:** `base_desktop.html`, `base_mobile.html`
 
+## 2.4 Create Page Templates
+
+Create `app/templates/pages/` — 12 files. Each extends `base.html` and composes from prisms/lenses/photons/quanta.
+
+| Page | Replaces | Key Compositions |
+|------|----------|-----------------|
+| `pages/home.html` | `activity/feed.html` | `prisms/activity-feed.html` |
+| `pages/signup.html` | `auth/signup.html` | `photons/form-field.html`, `photons/form-errors.html`, `quanta/button.html` |
+| `pages/login.html` | `auth/login.html` | same |
+| `pages/onboarding-profile.html` | `auth/onboarding/profile.html` | `photons/step-indicator.html`, `photons/form-field.html` |
+| `pages/onboarding-wallet.html` | `auth/onboarding/wallet.html` | `photons/step-indicator.html`, `quanta/button.html` (preserves Hyperscript) |
+| `pages/friends.html` | `friends/list.html` | `prisms/friend-list.html` |
+| `pages/groups-list.html` | `groups/list.html` | `lenses/invite-card.html`, `lenses/group-card.html` |
+| `pages/group-detail.html` | `groups/detail.html` | `prisms/group-members.html`, `prisms/balance-summary.html`, `prisms/group-expenses.html` |
+| `pages/group-create.html` | `groups/create.html` | `photons/form-field.html`, `quanta/button.html` |
+| `pages/settle.html` | `settlement/settle.html` | `photons/debt-arrow.html`, `lenses/settlement-card.html` |
+| `pages/profile.html` | profile own view | `photons/form-field.html` |
+| `pages/profile-public.html` | profile public view | `photons/user-pill.html` |
+
+## 2.5 Verification (Session 2)
+
+1. `make tailwind` — builds without errors (new template classes get picked up)
+2. Visually inspect each page template file — verify no raw colors (`text-red-*`, `bg-yellow-*`, `foreground/XX`) remain
+3. At this point Django still serves old templates (views haven't been updated). That's fine. The new templates exist side-by-side.
+
 ---
 
-## Phase 8: Page Templates + Backend
+# SESSION 3: Backend Wiring + Cleanup
 
-### 8a. Create `app/templates/pages/`
+**Depends on:** Session 2 complete (pages/, prisms/, lenses/ must exist).
 
-| Page | Replaces |
-|------|----------|
-| `pages/home.html` | `activity/feed.html` |
-| `pages/signup.html` | `auth/signup.html` |
-| `pages/login.html` | `auth/login.html` |
-| `pages/onboarding-profile.html` | `auth/onboarding/profile.html` |
-| `pages/onboarding-wallet.html` | `auth/onboarding/wallet.html` |
-| `pages/friends.html` | `friends/list.html` |
-| `pages/groups-list.html` | `groups/list.html` |
-| `pages/group-detail.html` | `groups/detail.html` |
-| `pages/group-create.html` | `groups/create.html` |
-| `pages/settle.html` | `settlement/settle.html` |
-| `pages/profile.html` | profile own view |
-| `pages/profile-public.html` | profile public view |
+**Goal:** Wire Django views to the new templates, add context processor for bottom-nav, update API partial paths, delete old templates, merge `m/` app. After this session, the app runs fully on the new template system.
 
-### 8b. Add `active_tab` context processor
+**Commit after this session.**
 
-Add to existing `app/config/context_processors.py`:
+## 3.1 Add `active_tab` Context Processor
+
+**File:** `app/config/context_processors.py` (add to existing)
+
 ```python
 def active_tab(request):
     path = request.path.rstrip('/')
@@ -377,9 +419,9 @@ def active_tab(request):
     return {'active_tab': 'activity'}
 ```
 
-Register in `config/settings.py` `TEMPLATES[0]['OPTIONS']['context_processors']`.
+**File:** `app/config/settings.py` — register in `TEMPLATES[0]['OPTIONS']['context_processors']`
 
-### 8c. Update `app/web/views.py` template paths
+## 3.2 Update `web/views.py` Template Paths
 
 | View | Old | New |
 |------|-----|-----|
@@ -393,7 +435,7 @@ Register in `config/settings.py` `TEMPLATES[0]['OPTIONS']['context_processors']`
 | `profile` | `auth/onboarding/profile.html` | `pages/profile.html` |
 | `profile_public` | `auth/onboarding/profile.html` | `pages/profile-public.html` |
 
-### 8d. Update API partial template paths
+## 3.3 Update API Partial Template Paths
 
 | Old Partial | New |
 |-------------|-----|
@@ -409,15 +451,40 @@ Register in `config/settings.py` `TEMPLATES[0]['OPTIONS']['context_processors']`
 | `partials/toast.html` | `quanta/toast.html` |
 | `partials/loading.html` | `quanta/spinner.html` |
 
----
+Note: some "thin wrappers" are new files that live alongside the lenses. These contain just a `{% for %}` loop + the infinite scroll sentinel (for activity) or conditional display logic (for pending requests). They can live in `prisms/` or as standalone partials in `lenses/`.
 
-## Phase 9: Cleanup
+## 3.4 Delete Old Template Directories
 
-- Delete old template directories: `components/`, `partials/`, `auth/`, `activity/`, `friends/`, `groups/`, `expenses/`, `settlement/`
+After confirming all views point to new templates:
+- `app/templates/components/`
+- `app/templates/partials/`
+- `app/templates/auth/`
+- `app/templates/activity/`
+- `app/templates/friends/`
+- `app/templates/groups/`
+- `app/templates/expenses/`
+- `app/templates/settlement/`
+
+## 3.5 Merge `m/` App (Optional)
+
 - Route both `''` and `'m/'` to `web.urls` in `config/urls.py`
+- Add redirect from `/m/*` → `/*` for backward compat
 - Remove `'m'` from `INSTALLED_APPS`
-- Move manifest.json to root static
-- Delete `m/` app directory
+- Move `m/manifest.json` to root static
+- Delete `app/m/` directory
+
+## 3.6 Verification (Session 3 — Full)
+
+1. `make tailwind` — builds
+2. `make server` — starts
+3. Visit every page: Nunito Sans body, Syne Mono addresses, no raw colors
+4. `grep -r "foreground/" app/templates/` — zero results
+5. `grep -rE "text-red|text-green|text-yellow|text-blue|text-purple" app/templates/` — zero results
+6. 375px viewport — nothing overflows, bottom nav visible, active tab highlighted
+7. 1024px+ — top nav visible, bottom nav hidden
+8. HTMX interactions: search, infinite scroll, expense add, settlement polling
+9. Hyperscript: wallet connect, sign/verify, encrypt/decrypt
+10. Toast notifications for all types
 
 ---
 
@@ -430,41 +497,27 @@ Register in `config/settings.py` `TEMPLATES[0]['OPTIONS']['context_processors']`
 
 ---
 
-## Files Modified (Summary)
+## Files Modified (Full Summary)
 
-| Action | Path |
-|--------|------|
-| **Rewrite** | `app/static/css/tw-in.css` |
-| **Rewrite** | `app/templates/base.html` |
-| **Edit** | `app/api/forms/auth.py` |
-| **Edit** | `app/api/forms/expenses.py` |
-| **Edit** | `app/api/forms/groups.py` |
-| **Edit** | `app/config/context_processors.py` |
-| **Edit** | `app/config/settings.py` |
-| **Edit** | `app/web/views.py` |
-| **Edit** | `app/api/views/*.py` (partial paths) |
-| (exists) | `app/static/font/` (3 TTF files already present) |
-| **Create** | `app/templates/quanta/` (11 files) |
-| **Create** | `app/templates/photons/` (7 files) |
-| **Create** | `app/templates/lenses/` (6 files) |
-| **Create** | `app/templates/prisms/` (8 files) |
-| **Create** | `app/templates/pages/` (12 files) |
-| **Delete** | `app/templates/base_desktop.html` |
-| **Delete** | `app/templates/base_mobile.html` |
-| **Delete** | Old template directories (after migration) |
-| **Delete** | `app/m/` (after merge) |
-
----
-
-## Verification
-
-1. `make tailwind` — verify `tw.css` builds without errors
-2. `make server` — verify Django starts
-3. Visit every page: verify Nunito Sans body, Syne Mono addresses, no raw colors
-4. `grep -r "foreground/" app/templates/` — zero results (no opacity patterns)
-5. `grep -rE "text-red|text-green|text-yellow|text-blue|text-purple" app/templates/` — zero results
-6. Test on 375px viewport — nothing overflows, bottom nav visible
-7. Test on 1024px+ — top nav visible, bottom nav hidden
-8. All HTMX interactions: search, infinite scroll, expense add, settlement polling
-9. All Hyperscript: wallet connect, sign/verify, encrypt/decrypt
-10. Toast notifications render correctly for all types
+| Action | Path | Session |
+|--------|------|---------|
+| **Rewrite** | `app/static/css/tw-in.css` | 1 |
+| **Edit** | `app/templates/base.html` (add font links) | 1 |
+| **Edit** | `app/api/forms/auth.py` | 1 |
+| **Edit** | `app/api/forms/expenses.py` | 1 |
+| **Edit** | `app/api/forms/groups.py` | 1 |
+| **Create** | `app/templates/quanta/` (11 files) | 1 |
+| **Create** | `app/templates/photons/` (7 files) | 1 |
+| **Create** | `app/templates/lenses/` (6 files) | 2 |
+| **Create** | `app/templates/prisms/` (8 files) | 2 |
+| **Rewrite** | `app/templates/base.html` (unified) | 2 |
+| **Delete** | `app/templates/base_desktop.html` | 2 |
+| **Delete** | `app/templates/base_mobile.html` | 2 |
+| **Create** | `app/templates/pages/` (12 files) | 2 |
+| **Edit** | `app/config/context_processors.py` | 3 |
+| **Edit** | `app/config/settings.py` | 3 |
+| **Edit** | `app/web/views.py` | 3 |
+| **Edit** | `app/api/views/*.py` | 3 |
+| **Delete** | Old template directories | 3 |
+| **Delete** | `app/m/` (optional) | 3 |
+| (exists) | `app/static/font/` (3 TTF files) | — |
