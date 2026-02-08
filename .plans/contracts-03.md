@@ -193,6 +193,111 @@ After `proxy.initialize(ownerAddress)` and `addToken()` calls, add:
 - Loop through domain config: `proxy.configureDomain(chainId, domain)` for each pair
 - Optionally: `proxy.setGatewayWallet(gatewayWalletAddress)`
 
+### Implementation Notes (2026-02-07)
+
+**Branch:** `contracts-settlement` (off `contracts`)
+**Worktree:** `src/contracts-settlement/`
+
+#### Plan Changes
+
+The following changes were made to the original plan during pre-implementation discussion:
+
+**1. `settle()` is a stub — `settleWithAuthorization()` is the primary function.**
+- `settle(address recipient, uint256 amount, bytes calldata memo)` reverts with `NotImplemented()`. Kept as a placeholder for future approval-based flow.
+- `settleWithAuthorization(address recipient, uint256 amount, bytes calldata memo, uint256 validAfter, uint256 validBefore, bytes32 nonce, bytes calldata signature)` is the primary entry point.
+- Uses EIP-3009 `receiveWithAuthorization` (not EIP-2612 permit). USDC natively supports this. The user signs a message authorizing the settlement contract to receive USDC, and the signature can be submitted by anyone (relayer, peer via Bluetooth, etc.). No prior approval transaction needed.
+- Rationale: Enables offline payments — user signs once, signature is transmitted out-of-band (Bluetooth, QR, etc.), and any party can submit it on-chain.
+
+**2. No `bytes32` in public API — addresses only.**
+- All public functions use `address recipient` instead of `bytes32 recipientNode`.
+- Node lookup is internal: the contract calls `subnameRegistry.addressToNode(recipient)` to get the ENS node, then reads payment preferences from text records.
+- Requires a new `addressToNode` mapping on the subnames contract (set automatically during `register()`).
+
+**3. Gateway is the default flow, CCTP is opt-in.**
+- The `com.khaalisplit.payment.flow` text record defaults to `"gateway"`.
+- Gateway routing: settlement contract pulls USDC → `forceApprove(gatewayWallet, amount)` → `gatewayWallet.depositFor(token, recipient, amount)`. Recipient gets a unified Gateway USDC balance.
+- CCTP routing (opt-in): user explicitly sets `payment.flow = "cctp"` and `payment.cctp = "<domain>"`. The contract calls `tokenMessenger.depositForBurn()`.
+- New minimal interface: `IGatewayWallet` with `depositFor(address token, address depositor, uint256 value)`.
+
+**4. No same-chain direct transfer in the contract.**
+- Same-chain transfers are handled by the client (direct USDC transfer, no intermediary). The settlement contract always routes through Gateway or CCTP.
+- If `payment.flow` is empty/default → Gateway. If `payment.flow == "cctp"` → CCTP.
+
+**5. Payment preferences read from ENS text records.**
+- `com.khaalisplit.payment.chain` — destination chain ID (uint as string, e.g. "8453")
+- `com.khaalisplit.payment.token` — token contract address on destination chain (e.g. USDC address on Base)
+- `com.khaalisplit.payment.flow` — `"gateway"` (default) or `"cctp"` (opt-in)
+- `com.khaalisplit.payment.cctp` — CCTP domain code (required if flow == "cctp", reverts if missing)
+- Follows ENSIP-5 service key convention (`com.khaalisplit.*` reverse domain notation).
+- Defaults if text records are empty: USDC on current chain, gateway flow.
+
+**6. Single event replaces all previous events.**
+- `SettlementCompleted(address indexed sender, address indexed recipient, address token, uint256 amount, uint256 senderReputation, bytes memo)` replaces `SettlementInitiated`, `SameChainSettlement`, `GatewaySettlement`.
+- `senderReputation` = 500 sentinel value if reputation contract is `address(0)`.
+- No `destChainId` in the event (removed per discussion).
+
+**7. Reputation integration.**
+- `reputationContract` storage field + `setReputationContract()` admin setter (same pattern as subnames).
+- After every successful settlement, calls `reputationContract.recordSettlement(sender, true)`.
+- Silently skips if `reputationContract == address(0)` (emits 500 sentinel in event).
+
+**8. `settleWithPermit()`, `settleViaGateway()`, `settleViaGatewayWithPermit()` all removed.**
+- Replaced by unified `settleWithAuthorization()` which reads the recipient's preferred flow from ENS text records and routes accordingly.
+
+**9. `withdraw()` removed** as planned (no relayer custody).
+
+**10. `note` parameter renamed to `memo`** — `bytes calldata memo` on both `settle` and `settleWithAuthorization`.
+
+**11. EIP-3009 interface uses `bytes` signature format.**
+- Matches USDC FiatTokenV2_2 which uses `bytes memory signature` (packed r,s,v) instead of separate v,r,s params.
+
+**12. Subnames contract change required.**
+- Add `mapping(address => bytes32) public addressToNode` to `khaaliSplitSubnames.sol`.
+- Set automatically in `register()`: `addressToNode[owner] = node`.
+- Add `addressToNode(address)` to `IkhaaliSplitSubnames.sol` interface.
+
+#### Files (Updated)
+
+| Action | File |
+|--------|------|
+| CREATE | `src/interfaces/IkhaaliSplitSettlement.sol` |
+| CREATE | `src/interfaces/ITokenMessengerV2.sol` |
+| CREATE | `src/interfaces/IGatewayWallet.sol` |
+| CREATE | `src/interfaces/IERC20Receive.sol` |
+| REWRITE | `src/khaaliSplitSettlement.sol` |
+| MODIFY | `src/khaaliSplitSubnames.sol` (add `addressToNode` mapping) |
+| MODIFY | `src/interfaces/IkhaaliSplitSubnames.sol` (add `addressToNode` to interface) |
+| REWRITE | `test/khaaliSplitSettlement.t.sol` |
+| CREATE | `test/helpers/MockTokenMessengerV2.sol` |
+| CREATE | `test/helpers/MockGatewayWallet.sol` |
+| MODIFY | `test/helpers/MockUSDC.sol` (add `receiveWithAuthorization` support) |
+| CREATE | `script/cctp.json` |
+| REWRITE | `script/tokens.json` |
+| MODIFY | `script/DeploySettlement.s.sol` |
+
+#### Test Coverage (target)
+
+- Initialization: state, reinit revert, zero-address reverts
+- settle(): reverts with NotImplemented
+- settleWithAuthorization — Gateway flow: success, events, reputation update, memo in event
+- settleWithAuthorization — CCTP flow: success with configured domain, reverts if cctp domain not in text records, reverts if domain not configured on contract
+- settleWithAuthorization — defaults: empty text records fall back to gateway
+- settleWithAuthorization — validation: zero amount, zero recipient, token not allowed, recipient not registered
+- settleWithAuthorization — reputation: updates score, 500 sentinel when contract not set, skips silently
+- Token management: addToken, removeToken, auth checks
+- Admin setters: setTokenMessenger, configureDomain, setGatewayWallet, setSubnameRegistry, setReputationContract
+- UUPS upgrades: owner only, state preservation
+- Implementation: cannot initialize directly
+
+#### Integration Tests (deferred to later session)
+
+1. **Full onboarding → settle → reputation flow:** Deploy all proxies → register subname (sets addressToNode) → set user node on reputation → settleWithAuthorization → verify reputation updated and ENS text record synced to "51"
+2. **Gateway routing end-to-end:** Register recipient with `payment.flow = "gateway"` → settle → verify MockGatewayWallet received `depositFor` with correct recipient and amount
+3. **CCTP routing end-to-end:** Register recipient with `payment.flow = "cctp"` and `payment.cctp = "6"` → settle → verify MockTokenMessengerV2 received `depositForBurn` with correct domain and recipient
+4. **Multi-user settlement isolation:** Register two recipients with different payment preferences → settle to each → verify correct routing per recipient
+5. **Authorization replay protection:** Use same EIP-3009 nonce twice → second call reverts
+6. **Offline settlement flow:** Pre-sign authorization → submit from different address → verify settlement completes correctly
+
 ---
 
 ## Change 2: ENS Subnames — On-Chain Registrar + Resolver
