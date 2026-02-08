@@ -49,6 +49,11 @@ contract khaaliSplitSubnames is Initializable, UUPSUpgradeable, OwnableUpgradeab
     /// @dev Set to address(0) until the reputation contract is deployed.
     address public reputationContract;
 
+    /// @notice Reverse lookup: wallet address → ENS subname node.
+    /// @dev Set automatically during register(). Used by the settlement contract
+    ///      to look up a recipient's ENS node from their address.
+    mapping(address => bytes32) public addressToNode;
+
     // ──────────────────────────────────────────────
     //  Events
     // ──────────────────────────────────────────────
@@ -148,6 +153,9 @@ contract khaaliSplitSubnames is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
         // Set default addr record to the owner
         _addresses[node] = owner;
+
+        // Set reverse lookup: address → node (used by settlement contract)
+        addressToNode[owner] = node;
 
         emit SubnameRegistered(node, label, owner);
         emit AddrRecordSet(node, owner);

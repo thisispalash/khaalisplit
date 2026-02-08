@@ -62,6 +62,13 @@ interface IkhaaliSplitSubnames {
     /// @return The ENS namehash of `label.khaalisplit.eth`.
     function subnameNode(string calldata label) external view returns (bytes32);
 
+    /// @notice Reverse lookup: address → ENS subname node.
+    /// @dev Set automatically during register(). Returns bytes32(0) if the address
+    ///      has no registered subname.
+    /// @param user The wallet address to look up.
+    /// @return The ENS namehash of the user's subname, or bytes32(0) if not registered.
+    function addressToNode(address user) external view returns (bytes32);
+
     // ──────────────────────────────────────────────
     //  Admin
     // ──────────────────────────────────────────────
