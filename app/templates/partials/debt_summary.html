@@ -1,0 +1,59 @@
+{# partials/debt_summary.html — HTMX partial for simplified debt display
+   Context:
+     debts : list of enriched debt dicts (from_subname, to_subname, from_address,
+             to_address, amount, is_payer, is_payee)
+     group : group object (.group_id)
+   Composes: photons/debt-arrow.html, quanta/amount.html
+   Preserves: Hyperscript settleWithPermit flow on Pay button
+#}
+
+<div class="space-y-3">
+  {% if debts %}
+    {% for debt in debts %}
+    <div class="p-4 border border-border rounded-md" id="debt-{{ forloop.counter }}">
+      <div class="flex items-center justify-between">
+        {% include 'photons/debt-arrow.html' with from_subname=debt.from_subname to_subname=debt.to_subname from_address=debt.from_address to_address=debt.to_address is_payer=debt.is_payer is_payee=debt.is_payee %}
+        <div class="text-right">
+          {% include 'quanta/amount.html' with value=debt.amount %}
+          {% if debt.is_payer %}
+          <div class="mt-1">
+            <button
+              class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
+                     bg-foreground text-background hover:bg-foreground/90 px-3 py-1.5 text-xs"
+              _="on click
+                   if not window.walletConnected
+                     call window.showToast('Connect wallet first', 'error')
+                     halt
+                   end
+                   set me.textContent to 'Signing...'
+                   set me.disabled to true
+                   try
+                     set result to await window.settleWithPermit(
+                       '{{ debt.to_address }}',
+                       '{{ debt.amount }}',
+                       {{ group.group_id }}
+                     )
+                     if result and result.hash
+                       call window.showToast('Settlement submitted!', 'success')
+                       set target to closest <div/> to me
+                       set target.innerHTML to '<p class=\"text-sm text-muted\">Tx: ' + result.hash.substring(0, 14) + '...</p>'
+                     end
+                   catch e
+                     call window.showToast('Settlement failed: ' + e.message, 'error')
+                     set me.textContent to 'Pay'
+                     set me.disabled to false
+                   end
+                 end"
+            >
+              Pay
+            </button>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    {% include 'quanta/empty-state.html' with title='All settled up!' subtitle='No outstanding debts in this group.' %}
+  {% endif %}
+</div>

@@ -1,0 +1,25 @@
+{# partials/activity_list.html — HTMX partial for paginated activity feed
+   Context:
+     activities : list of activity objects
+     has_more   : bool
+     next_page  : int
+   Composes: lenses/activity-card.html, quanta/spinner.html
+#}
+
+{% for activity in activities %}
+  {% include 'lenses/activity-card.html' %}
+{% empty %}
+  {% include 'quanta/empty-state.html' with title='No activity yet' subtitle='Start by adding friends or creating a group!' %}
+{% endfor %}
+
+{% if has_more %}
+  {# Infinite scroll sentinel — triggers load when revealed #}
+  <div
+    hx-get="/api/activity/load-more/?page={{ next_page }}"
+    hx-trigger="revealed"
+    hx-swap="outerHTML"
+    class="flex items-center justify-center py-4"
+  >
+    {% include 'quanta/spinner.html' %}
+  </div>
+{% endif %}

@@ -39,7 +39,7 @@ def search(request):
     .values_list('friend_user_id', flat=True)
   )
 
-  return render(request, 'friends/partials/search_results.html', {
+  return render(request, 'partials/search_results.html', {
     'results': results,
     'friend_ids': friend_addresses,
   })
@@ -94,7 +94,7 @@ def send_request(request, subname):
 
   request._wide_event['extra']['friend_request_to'] = subname
 
-  return render(request, 'friends/partials/friend_card.html', {
+  return render(request, 'lenses/friend-card.html', {
     'friend_user': friend_user,
     'status': 'pending_sent',
   })
@@ -132,7 +132,7 @@ def accept(request, address):
 
   request._wide_event['extra']['friend_accepted'] = address
 
-  return render(request, 'friends/partials/friend_card.html', {
+  return render(request, 'lenses/friend-card.html', {
     'friend_user': incoming.friend_user,
     'status': 'accepted',
   })
@@ -178,6 +178,6 @@ def pending(request):
     status=CachedFriend.Status.PENDING_RECEIVED,
   ).select_related('friend_user')
 
-  return render(request, 'friends/partials/pending_requests.html', {
+  return render(request, 'partials/pending_requests.html', {
     'pending': pending_requests,
   })
