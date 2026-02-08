@@ -1,0 +1,35 @@
+{# prisms/group-members.html — Invite form + HTMX member list
+   Context:
+     group : group object (.group_id)
+   Composes: photons/user-pill.html, quanta/badge.html (via member list partial)
+   Used by: pages/group-detail.html
+#}
+
+<div class="space-y-3">
+  <h2 class="text-sm font-medium text-muted">Members</h2>
+
+  {# Invite form — inline for locality of behavior #}
+  <form hx-post="/api/groups/{{ group.group_id }}/invite/"
+    hx-target="#member-list"
+    hx-swap="outerHTML"
+    class="flex gap-2"
+  >
+    {% csrf_token %}
+    <input type="text" name="subname"
+      placeholder="Invite by subname..."
+      class="flex-1"
+    >
+    <button type="submit"
+      class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
+             bg-foreground text-background hover:bg-foreground/90 px-4 py-2 text-xs">
+      Invite
+    </button>
+  </form>
+
+  {# Member list — loaded via HTMX #}
+  <div hx-get="/api/groups/{{ group.group_id }}/members/"
+    hx-trigger="load"
+    hx-swap="innerHTML">
+    {% include 'quanta/spinner.html' %}
+  </div>
+</div>

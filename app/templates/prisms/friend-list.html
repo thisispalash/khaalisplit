@@ -1,0 +1,26 @@
+{# prisms/friend-list.html — Search + pending requests + friends list
+   Composes: photons/search-bar.html, lenses/friend-card.html
+   Used by: pages/friends.html
+   Note: search-bar.html renders both input AND results container div
+#}
+
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Friends</h1>
+  </div>
+
+  {# Search bar with debounce — renders input + #search-results div #}
+  {% include 'photons/search-bar.html' with name='q' placeholder='Search by subname...' hx_get='/api/friends/search/' hx_target='#search-results' %}
+
+  {# Pending requests — loaded via HTMX #}
+  <div id="pending-requests"
+    hx-get="/api/friends/pending/"
+    hx-trigger="load"
+    hx-swap="innerHTML"
+  ></div>
+
+  {# Friends list placeholder #}
+  <div id="friends-list" class="text-subtle text-sm">
+    <p>Your friends will appear here.</p>
+  </div>
+</div>
