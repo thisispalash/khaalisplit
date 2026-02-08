@@ -12,9 +12,11 @@
     "mainnet": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B"
   },
   "domains": {
-    "11155111": { "name": "sepolia",     "domain": 0 },
-    "84532":   { "name": "baseSepolia",  "domain": 6 },
-    "1":       { "name": "ethereum",     "domain": 0 },
-    "8453":    { "name": "base",         "domain": 6 }
+    "11155111": { "name": "sepolia",         "domain": 0 },
+    "84532":   { "name": "baseSepolia",      "domain": 6 },
+    "421614":  { "name": "arbitrumSepolia",  "domain": 3 },
+    "11155420":{ "name": "optimismSepolia",  "domain": 2 },
+    "1":       { "name": "ethereum",         "domain": 0 },
+    "8453":    { "name": "base",             "domain": 6 }
   }
 }
