@@ -53,6 +53,16 @@
       {% include 'quanta/button.html' with variant='secondary' href='/api/auth/onboarding/wallet/' label='Connect Wallet' %}
     {% endif %}
   </div>
+
+  {# Payment preferences — loaded via HTMX from the API #}
+  <div
+    hx-get="/api/profile/payment-preferences/"
+    hx-trigger="load"
+    hx-swap="innerHTML"
+  >
+    {% include 'quanta/spinner.html' %}
+  </div>
+
   {% else %}
   {# Read-only public profile #}
   <div class="space-y-3">
