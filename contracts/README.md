@@ -11,7 +11,7 @@ Smart contracts for khaaliSplit, built with [Foundry](https://getfoundry.sh/).
 | `khaaliSplitExpenses` | Sepolia | Expense registry (hashes on-chain, encrypted data in events) |
 | `khaaliSplitSubnames` | Sepolia | On-chain ENS subname registrar + resolver for `*.khaalisplit.eth` |
 | `khaaliSplitReputation` | Sepolia | On-chain reputation scores, synced to ENS text records |
-| `khaaliSplitSettlement` | All chains | USDC settlement via EIP-3009, routed through Circle Gateway or CCTP |
+| `khaaliSplitSettlement` | All chains | USDC settlement via EIP-3009 or Gateway mint, routed through Circle Gateway or CCTP |
 | `khaaliSplitResolver` | Sepolia | CCIP-Read (EIP-3668) ENS resolver *(deprecated — replaced by Subnames)* |
 | `kdioDeployer` | All chains | CREATE2 factory for deterministic proxy addresses |
 
@@ -32,8 +32,9 @@ All contracts (except `kdioDeployer`) use the **UUPS upgradeable proxy pattern**
 ## Settlement
 
 The settlement contract routes USDC payments based on the recipient's ENS text record preferences.
+Two settlement flows are supported: **direct** (EIP-3009) and **Gateway mint** (Circle Gateway attestation).
 
-### Flow
+### Flow 1: Direct Settlement (`settleWithAuthorization`)
 
 ```
 1. Sender signs an EIP-3009 ReceiveWithAuthorization message off-chain
@@ -52,13 +53,50 @@ The settlement contract routes USDC payments based on the recipient's ENS text r
 7. Emits SettlementCompleted event
 ```
 
+### Flow 2: Gateway Mint Settlement (`settleFromGateway`)
+
+For cross-chain payments via Circle's Gateway API. The sender pays from their Gateway USDC
+balance, and the backend orchestrates the mint + settlement atomically.
+
+```
+1. Sender signs a BurnIntent (EIP-712) off-chain
+   (destinationRecipient = settlement contract address)
+2. Backend submits signed BurnIntent to Circle Gateway API
+   → receives attestationPayload + attestationSignature
+3. Backend calls settleFromGateway(attestation, sig, recipientNode, sender, memo)
+4. Contract calls gatewayMinter.gatewayMint() → USDC minted to settlement contract
+5. Balance-diff pattern: balanceAfter - balanceBefore = actual minted amount
+   (naturally handles Gateway fees without knowing the fee structure)
+6. Routes to recipient via Gateway or CCTP (same routing as Flow 1)
+7. Updates sender's reputation score
+8. Emits SettlementCompleted event
+9. All atomic — if any step reverts, the mint reverts too
+```
+
+### Key Contracts (Circle Infrastructure)
+
+| Contract | Address | Role |
+|----------|---------|------|
+| GatewayWallet | `0x0077777d7EBA4688BDeF3E311b846F25870A19B9` | Holds deposited USDC, manages Gateway balances |
+| GatewayMinter | `0x0022222ABE238Cc2C7Bb1f21003F0a260052475B` | Mints USDC on destination chain from attestation |
+
+Both are deployed at the same address on all chains via CREATE2.
+
 ### Routing
+
+Both settlement flows use the same routing logic based on the recipient's ENS text records:
 
 | Route | When | What happens |
 |-------|------|-------------|
 | **Gateway** (default) | `flow` is empty, `"gateway"`, or unknown | Approves + calls `gatewayWallet.depositFor(token, recipient, amount)`. Recipient gets unified Gateway USDC balance across chains. |
 | **CCTP** (opt-in) | `flow == "cctp"` | Reads CCTP domain from text records, approves + calls `tokenMessenger.depositForBurn()`. Recipient gets USDC minted on destination chain. |
 | **Same-chain** | Sender and recipient on same chain | Handled client-side (direct USDC transfer). Not routed through the contract. |
+
+### NFC/Bluetooth UX
+
+The client differentiates flows via a `type` field in the NFC/Bluetooth payload:
+- `type: "direct"` → EIP-3009 flow → `settleWithAuthorization`
+- `type: "gateway"` → BurnIntent flow → backend → Circle API → `settleFromGateway`
 
 ### ENS Text Records (ENSIP-5)
 
@@ -80,6 +118,45 @@ the standard approve + transferFrom pattern. Key properties:
 - **Front-running protected**: Only the contract (`msg.sender == to`) can execute
 - **Random nonces**: Allows concurrent pending authorizations (unlike sequential EIP-2612 nonces)
 - **Offline-friendly**: Signatures can be relayed via NFC, Bluetooth, or QR code
+
+### Design Decisions
+
+- **`bytes32 recipientNode` as primary parameter**: All settlement functions take the ENS namehash instead of a wallet address. The contract resolves the address internally via `subnameRegistry.addr(node)`. The ENS node is the canonical identifier — addresses can change (via `setAddr`), but the node is permanent.
+- **Sender passed explicitly in `settleFromGateway`**: Rather than parsing the sender from the attestation payload bytes (gas-expensive offset math), the sender address is passed as a parameter. Since the attestation is verified by Circle's GatewayMinter (signature check), and the sender is only used for reputation tracking, this is a pragmatic hackathon tradeoff. On-chain attestation parsing can be added later.
+- **Balance-diff pattern for minted amount**: `settleFromGateway` records `balanceOf(this)` before and after the `gatewayMint` call, using the difference as the actual amount. This naturally handles Gateway fees without needing to know the fee structure or parse fee data from the attestation.
+- **`initialize(address _owner)` signature preserved**: All post-deployment configuration (tokens, CCTP, Gateway, subnames, reputation) is done via admin setters rather than constructor/initializer args. This keeps the implementation bytecode identical across chains for CREATE2 address determinism.
+- **No access control on settlement functions**: Both `settleWithAuthorization` and `settleFromGateway` are callable by anyone. Authorization comes from the EIP-3009 signature (Flow 1) or Circle's attestation signature (Flow 2), not from `msg.sender`.
+
+### Offline Payments
+
+A key design goal of khaaliSplit is enabling payments without requiring the sender to be online
+at the time of settlement. The contract architecture supports this through signature-based
+authorization — the sender signs a message off-chain, and anyone can submit it later.
+
+**How it works:**
+
+1. **Sender goes offline** after signing. The signature is the authorization — no further
+   interaction is needed from the sender.
+2. **Signature is transmitted** via local channels that don't require internet:
+   - **NFC tap**: Sender holds phone near recipient's phone, signature transfers instantly
+   - **Bluetooth**: Nearby devices exchange signature data over BLE
+   - **QR code**: Sender displays QR, recipient scans it
+3. **Anyone submits** the signature to the blockchain. The recipient, a friend, a backend
+   relayer, or any third party can call `settleWithAuthorization()`. The contract validates
+   the signature, not `msg.sender`.
+
+**Why this matters:**
+
+- **No internet for sender**: Pay at a restaurant with no wifi — tap your phone, walk away
+- **No gas for sender**: The submitter pays gas, not the signer
+- **No front-running**: EIP-3009's `receiveWithAuthorization` ensures only the settlement
+  contract (`to == address(this)`) can execute the transfer
+- **Concurrent payments**: EIP-3009 uses random nonces (not sequential like EIP-2612), so
+  multiple pending payments don't block each other
+
+The Gateway mint flow (`settleFromGateway`) also supports offline senders — the sender signs
+a BurnIntent off-chain, and the backend handles the rest (Circle API call + contract submission).
+The sender never needs to be online after signing.
 
 ## Subnames
 
@@ -167,13 +244,14 @@ forge test --gas-report
 | `test/helpers/MockUSDC.sol` | Mock ERC20 + EIP-3009 `receiveWithAuthorization` |
 | `test/helpers/MockTokenMessengerV2.sol` | Mock CCTP TokenMessengerV2 |
 | `test/helpers/MockGatewayWallet.sol` | Mock Circle Gateway Wallet |
+| `test/helpers/MockGatewayMinter.sol` | Mock Circle Gateway Minter (mints configurable USDC to caller) |
 | `test/helpers/MockNameWrapper.sol` | Mock ENS NameWrapper for subname tests |
 
 ### Test Coverage
 
 | Contract | Tests |
 |----------|-------|
-| `khaaliSplitSettlement` | 52 tests — init, gateway, cctp, validation, reputation, admin, upgrades, nonce replay |
+| `khaaliSplitSettlement` | 70 tests — init, gateway routing, CCTP routing, settleFromGateway, validation, reputation, admin setters, upgrades, nonce replay |
 | `khaaliSplitSubnames` | 47 tests — registration, text/addr records, access control, ERC-165, upgrades |
 | `khaaliSplitReputation` | 60 tests — scoring, ENS sync, access control, boundary conditions, upgrades |
 | `khaaliSplitFriends` | 27 tests |
@@ -182,7 +260,7 @@ forge test --gas-report
 | `khaaliSplitResolver` | 17 tests |
 | `kdioDeployer` | 6 tests |
 | Integration (UserFlows) | 5 tests (1 skipped — old settlement flow) |
-| **Total** | **250 passing, 1 skipped** |
+| **Total** | **268 passing, 1 skipped** |
 
 ## Deployment
 
@@ -195,7 +273,7 @@ Set up your `.env` file according to [`.env.example`](./.env.example)
 | File | Description |
 |------|-------------|
 | [`script/tokens.json`](script/tokens.json) | USDC addresses per chain, keyed by chain ID |
-| [`script/cctp.json`](script/cctp.json) | TokenMessenger + Gateway addresses (testnet/mainnet), CCTP domain mappings |
+| [`script/cctp.json`](script/cctp.json) | TokenMessenger, GatewayWallet, GatewayMinter addresses (testnet/mainnet), CCTP domain mappings |
 
 ### 3. Deploy
 
@@ -235,7 +313,8 @@ NETWORK_TYPE=testnet forge script script/DeploySettlement.s.sol:DeploySettlement
   deletes their encrypted key and emits `MemberLeft`, but key rotation must be handled by
   the client application.
 - **`settle()` stub**: The approval-based settlement flow is not yet implemented — `settle()`
-  reverts with `NotImplemented()`. Only `settleWithAuthorization()` is functional.
+  reverts with `NotImplemented()`. Use `settleWithAuthorization()` (EIP-3009) or
+  `settleFromGateway()` (Gateway mint) instead.
 - **Mainnet Gateway address TBD**: The mainnet Circle Gateway Wallet address is a placeholder
   (`0x0`) in `cctp.json`. Must be verified on Etherscan before mainnet deployment.
 - **No integration test for settlement flow**: The old settlement integration test
