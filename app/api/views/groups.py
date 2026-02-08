@@ -38,9 +38,15 @@ def create(request):
   name_hash = Web3.solidity_keccak(['string'], [name]).hex()
   user_address = _get_user_address(request.user)
 
-  # Encrypted key from client (hex). For hackathon, use a placeholder if empty.
-  encrypted_key = request.POST.get('encrypted_key', '') or '0x00'
-  encrypted_key_bytes = bytes.fromhex(encrypted_key.replace('0x', '') if encrypted_key.startswith('0x') else encrypted_key) if encrypted_key else b'\x00'
+  # Encrypted key from client (hex). For hackathon, use a 32-byte placeholder if empty.
+  encrypted_key = request.POST.get('encrypted_key', '').strip()
+  if encrypted_key and encrypted_key not in ('', '0x', '0x00'):
+    hex_str = encrypted_key.replace('0x', '')
+    encrypted_key_bytes = bytes.fromhex(hex_str)
+  else:
+    # Placeholder: 32 random bytes so the contract doesn't reject zero/short data
+    import os as _os
+    encrypted_key_bytes = _os.urandom(32)
   name_hash_bytes = bytes.fromhex(name_hash.replace('0x', '') if name_hash.startswith('0x') else name_hash)
 
   # On-chain: createGroupFor returns groupId
@@ -112,8 +118,13 @@ def invite(request, group_id):
 
   inviter_address = _get_user_address(request.user)
   member_address = _get_user_address(invite_user)
-  encrypted_key = request.POST.get('encrypted_key', '') or '0x00'
-  encrypted_key_bytes = bytes.fromhex(encrypted_key.replace('0x', '') if encrypted_key.startswith('0x') else encrypted_key) if encrypted_key else b'\x00'
+  encrypted_key = request.POST.get('encrypted_key', '').strip()
+  if encrypted_key and encrypted_key not in ('', '0x', '0x00'):
+    hex_str = encrypted_key.replace('0x', '')
+    encrypted_key_bytes = bytes.fromhex(hex_str)
+  else:
+    import os as _os
+    encrypted_key_bytes = _os.urandom(32)
 
   CachedGroupMember.objects.create(
     group=group,
