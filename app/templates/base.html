@@ -24,13 +24,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Syne+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/tw.css' %}">
+
+    <script src="{% static 'js/htmx@2.0.8.js' %}"></script>
+    <script src="{% static 'js/htmx-ext-ws@2.0.4.js' %}"></script>
+    <script src="{% static 'js/_hyperscript@0.9.14.js' %}"></script>
+    <script src="{% static 'js/ethers@6.7.0.js' %}"></script>
+
     {% block extra_head %}{% endblock %}
   </head>
-
-  <script src="{% static 'js/htmx@2.0.8.js' %}"></script>
-  <script src="{% static 'js/htmx-ext-ws@2.0.4.js' %}"></script>
-  <script src="{% static 'js/_hyperscript@0.9.14.js' %}"></script>
-  <script src="{% static 'js/ethers@6.7.0.js' %}"></script>
 
   <body
     class="min-h-screen w-full bg-background text-foreground font-sans flex flex-col"
@@ -62,17 +63,17 @@
     {# Mobile bottom navigation #}
     {% include 'prisms/bottom-nav.html' %}
 
+    <script src="{% static 'js/crypto.js' %}" defer></script>
+    <script src="{% static 'js/wallet.js' %}" defer></script>
+    <script src="{% static 'js/app.js' %}" defer></script>
+
+    {% block extra_js %}{% endblock %}
+
+    {% if GOATCOUNTER_URL %}
+    <script src="{% static 'js/goat.js' %}" defer
+      data-goatcounter="{{ GOATCOUNTER_URL }}"></script>
+    {% endif %}
+
   </body>
-
-  <script src="{% static 'js/crypto.js' %}" defer></script>
-  <script src="{% static 'js/wallet.js' %}" defer></script>
-  <script src="{% static 'js/app.js' %}" defer></script>
-
-  {% block extra_js %}{% endblock %}
-
-  {% if GOATCOUNTER_URL %}
-  <script src="{% static 'js/goat.js' %}" defer
-    data-goatcounter="{{ GOATCOUNTER_URL }}"></script>
-  {% endif %}
 
 </html>
