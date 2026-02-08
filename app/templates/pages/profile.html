@@ -50,7 +50,7 @@
       </div>
     {% else %}
       <p class="text-subtle text-sm">No wallet linked.</p>
-      {% include 'quanta/button.html' with variant='secondary' href='/onboarding/wallet/' label='Connect Wallet' %}
+      {% include 'quanta/button.html' with variant='secondary' href='/api/auth/onboarding/wallet/' label='Connect Wallet' %}
     {% endif %}
   </div>
   {% else %}
