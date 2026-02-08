@@ -22,13 +22,28 @@ let signer = null;
  */
 window.connectWallet = async function connectWallet() {
   try {
-    // Check for injected provider (MetaMask, Rabby, etc.)
-    if (typeof window.ethereum !== 'undefined') {
-      provider = new ethers.BrowserProvider(window.ethereum);
-      await provider.send('eth_requestAccounts', []);
-      signer = await provider.getSigner();
+    // Get the actual provider, bypassing the proxy wrapper on window.ethereum
+    // The proxy's selectExtension flow is broken in some MetaMask versions,
+    // but the underlying providers[0] works fine.
+    let injected = window.ethereum?.providers?.[0] || window.ethereum || null;
 
-      const address = await signer.getAddress();
+    if (injected) {
+      // Request accounts directly via the raw provider — this works.
+      // Then wrap with ethers using JsonRpcProvider pointed at the same RPC,
+      // avoiding BrowserProvider which re-triggers the broken proxy.
+      const accounts = await injected.request({ method: 'eth_requestAccounts' });
+      const chainIdHex = await injected.request({ method: 'eth_chainId' });
+      const address = accounts[0];
+      const chainId = parseInt(chainIdHex, 16);
+
+      // Use ethers JsonRpcProvider via the raw provider's request method
+      provider = new ethers.BrowserProvider({
+        request: (a) => injected.request(a),
+        on: () => {},
+        removeListener: () => {},
+      });
+      signer = await provider.getSigner(address);
+
       const network = await provider.getNetwork();
 
       // Update Hyperscript globals
@@ -236,21 +251,26 @@ window.settleWithPermit = async function settleWithPermit(recipient, amount, gro
 // Account change listeners
 // ────────────────────────────────────────────────────────
 
-if (typeof window.ethereum !== 'undefined') {
-  window.ethereum.on('accountsChanged', async (accounts) => {
-    if (accounts.length === 0) {
-      window.disconnectWallet();
-    } else if (signer) {
-      const address = accounts[0];
-      window.walletAddress = address;
-      document.body.dispatchEvent(new CustomEvent('walletChanged'));
-      console.log('[wallet] Account changed:', address);
-    }
-  });
+{
+  // Use the actual provider, not the proxy wrapper
+  let listen = window.ethereum?.providers?.[0] || window.ethereum || null;
 
-  window.ethereum.on('chainChanged', (chainId) => {
-    window.walletChainId = parseInt(chainId, 16);
-    document.body.dispatchEvent(new CustomEvent('walletChanged'));
-    console.log('[wallet] Chain changed:', window.walletChainId);
-  });
+  if (listen) {
+    listen.on('accountsChanged', async (accounts) => {
+      if (accounts.length === 0) {
+        window.disconnectWallet();
+      } else if (signer) {
+        const address = accounts[0];
+        window.walletAddress = address;
+        document.body.dispatchEvent(new CustomEvent('walletChanged'));
+        console.log('[wallet] Account changed:', address);
+      }
+    });
+
+    listen.on('chainChanged', (chainId) => {
+      window.walletChainId = parseInt(chainId, 16);
+      document.body.dispatchEvent(new CustomEvent('walletChanged'));
+      console.log('[wallet] Chain changed:', window.walletChainId);
+    });
+  }
 }
