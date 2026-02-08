@@ -5,6 +5,7 @@ from api.views import ens_gateway
 from api.views import friends as friends_views
 from api.views import groups as groups_views
 from api.views import expenses as expenses_views
+from api.views import profile as profile_views
 from api.views import settlement as settlement_views
 from api.views import activity as activity_views
 
@@ -19,6 +20,9 @@ urlpatterns = [
   path('auth/onboarding/wallet/', auth_views.onboarding_wallet_view, name='onboarding-wallet'),
   path('auth/address/verify/', auth_views.verify_signature, name='verify-signature'),
   path('auth/pubkey/register/', auth_views.register_pubkey, name='register-pubkey'),
+
+  # Profile
+  path('profile/payment-preferences/', profile_views.payment_preferences, name='payment-preferences'),
 
   # Friends
   path('friends/search/', friends_views.search, name='friends-search'),

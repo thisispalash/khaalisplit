@@ -1,15 +1,19 @@
 import json
 import logging
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
 from unique_names_generator import get_random_name
 from unique_names_generator.data import ADJECTIVES, ANIMALS
+from web3 import Web3
 
 from api.forms.auth import LoginForm, ProfileForm, SignupForm
 from api.models import Activity, User
+from api.utils.ens_codec import subname_node
+from api.utils.web3_utils import TOKEN_ADDRESSES, send_tx
 
 logger = logging.getLogger('wide_event')
 
@@ -21,6 +25,102 @@ def _generate_subname():
     if not User.objects.filter(subname=name).exists():
       return name
   raise RuntimeError('Could not generate a unique subname after 100 attempts')
+
+
+def _get_backend_address() -> str:
+  """Derive the backend wallet address from BACKEND_PRIVATE_KEY."""
+  from eth_account import Account
+  pk = settings.BACKEND_PRIVATE_KEY
+  if not pk:
+    return ''
+  return Account.from_key(pk).address
+
+
+def _register_subname_onchain(user):
+  """
+  Register a subname on-chain after signup.
+
+  Calls khaaliSplitSubnames.register(label, owner) where owner is
+  the backend address (user hasn't linked a wallet yet).
+
+  Non-blocking: if the tx fails, signup still succeeds.
+  """
+  try:
+    backend_addr = _get_backend_address()
+    if not backend_addr:
+      logger.warning(f'Skipping subname registration — no BACKEND_PRIVATE_KEY')
+      return
+
+    # Register the subname with the backend as initial owner
+    tx_hash = send_tx(
+      'subnames', 'register',
+      user.subname,
+      Web3.to_checksum_address(backend_addr),
+    )
+
+    Activity.objects.create(
+      user=user,
+      action_type=Activity.ActionType.FRIEND_REQUEST,  # reuse until we add a SUBNAME_REGISTERED type
+      message=f'Subname {user.subname}.khaalisplit.eth registered on-chain',
+      metadata={'tx_hash': tx_hash},
+    )
+
+    logger.info(f'Subname registered: {user.subname} tx={tx_hash}')
+
+    # If display_name is set, also store it as a text record
+    if user.display_name:
+      node = subname_node(user.subname)
+      send_tx('subnames', 'setText', node, 'display_name', user.display_name)
+
+  except Exception:
+    logger.exception(f'Subname registration failed for {user.subname}')
+
+
+def _set_onchain_wallet_records(user, address: str, chain_id: int):
+  """
+  After wallet linking, set on-chain records:
+  1. setAddr — so the subname resolves to the user's wallet
+  2. setText — default payment preferences (flow, token, chain)
+  3. setUserNode — link wallet to ENS node in reputation contract
+
+  Non-blocking: if any tx fails, the wallet link still succeeds.
+  """
+  node = subname_node(user.subname)
+
+  try:
+    # 1. Set addr record so subname resolves to user's wallet
+    tx_hash = send_tx(
+      'subnames', 'setAddr',
+      node,
+      Web3.to_checksum_address(address),
+    )
+    logger.info(f'setAddr tx={tx_hash} for {user.subname}')
+  except Exception:
+    logger.exception(f'setAddr failed for {user.subname}')
+
+  try:
+    # 2. Set default payment preferences as text records
+    usdc_addr = TOKEN_ADDRESSES.get(chain_id, {}).get('USDC', '')
+
+    send_tx('subnames', 'setText', node, 'com.khaalisplit.payment.flow', 'gateway')
+    send_tx('subnames', 'setText', node, 'com.khaalisplit.payment.chain', str(chain_id))
+    if usdc_addr:
+      send_tx('subnames', 'setText', node, 'com.khaalisplit.payment.token', usdc_addr)
+
+    logger.info(f'Payment prefs set for {user.subname} chain={chain_id}')
+  except Exception:
+    logger.exception(f'Payment prefs setText failed for {user.subname}')
+
+  try:
+    # 3. Link wallet to ENS node in reputation contract
+    send_tx(
+      'reputation', 'setUserNode',
+      Web3.to_checksum_address(address),
+      node,
+    )
+    logger.info(f'setUserNode tx for {user.subname}')
+  except Exception:
+    logger.exception(f'setUserNode failed for {user.subname}')
 
 
 @require_http_methods(['GET', 'POST'])
@@ -41,6 +141,9 @@ def signup_view(request):
     subname=subname,
     password=form.cleaned_data['password'],
   )
+
+  # Register subname on-chain (non-blocking — signup succeeds even if tx fails)
+  _register_subname_onchain(user)
 
   # Log activity
   Activity.objects.create(
@@ -159,14 +262,20 @@ def verify_signature(request):
     return HttpResponse('Address already linked to another account', status=409)
 
   # Create or update the linked address
+  is_first_address = not request.user.addresses.filter(is_primary=True).exists()
   linked, created = LinkedAddress.objects.update_or_create(
     user=request.user,
     address=address,
     defaults={
-      'is_primary': not request.user.addresses.filter(is_primary=True).exists(),
+      'is_primary': is_first_address,
       'pub_key': pub_key,
     },
   )
+
+  # If this is the primary address, set on-chain records
+  if linked.is_primary:
+    chain_id = linked.chain_id  # defaults to 11155111 (Sepolia)
+    _set_onchain_wallet_records(request.user, address, chain_id)
 
   # Log activity
   Activity.objects.create(
@@ -183,6 +292,15 @@ def verify_signature(request):
       'linked_address': linked,
       'success': True,
     })
+
+  # Non-HTMX fetch (Hyperscript): return JSON so the client can handle redirect
+  content_type = request.content_type or ''
+  if 'application/json' in content_type:
+    return HttpResponse(
+      json.dumps({'ok': True, 'address': address}),
+      content_type='application/json',
+    )
+
   return redirect('/')
 
 

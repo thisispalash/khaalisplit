@@ -947,3 +947,106 @@ Add mobile-specific messaging:
 - Offline action queue (P1)
 - Signal-style ratcheting (P2)
 - QR codes for settlement (P2)
+
+---
+
+## Implementation Notes
+
+### Session 1 — Completed
+
+**Date:** 2026-02-08
+
+#### Deviations from plan
+
+1. **EURC removed entirely.** The plan listed EURC token addresses for several chains, but `contracts/script/tokens.json` only has USDC. EURC was removed from both `web3_utils.py` and `wallet.js`. Only USDC is supported.
+
+2. **`get_contract()` returns `(w3, contract)` tuple** instead of just the contract. This was necessary because `send_tx()` needs both the Web3 instance (for nonce, gas price, sending) and the contract.
+
+3. **`register_pubkey_onchain()` refactored** to use `send_tx()` internally instead of duplicating tx-building logic. The function signature and behavior are unchanged — callers in `auth.py` are unaffected.
+
+4. **Settlement addresses hardcoded from `deployments.json`**, not from env vars. The plan said "per-chain addresses" — we put them directly in `web3_utils.py` as a `SETTLEMENT_ADDRESSES` dict sourced from `deployments.json`. This avoids needing 5 separate env vars for settlement.
+
+5. **Circle Gateway API client uses `urllib` (stdlib)** instead of `requests`. The project doesn't have `requests` as a dependency and `web3` doesn't pull it in transitively in this environment. Using stdlib avoids adding a new dependency.
+
+6. **Circle Gateway base URL corrected.** The plan said `https://api.circle.com` but the actual testnet Gateway API URL is `https://gateway-api-testnet.circle.com` (production: `https://gateway-api.circle.com`). The Gateway API is separate from Circle's general platform API.
+
+7. **Circle Gateway domain IDs mapped.** The Gateway API uses its own domain ID scheme (not EVM chain IDs). Added `CHAIN_TO_GATEWAY_DOMAIN` mapping: Ethereum=0, OP=2, Arbitrum=3, Base=6, Arc=26.
+
+8. **`wallet.js` — `settleWithPermit` removed.** The old permit-based settlement flow is no longer valid (the settlement contract uses EIP-3009 `ReceiveWithAuthorization`, not EIP-2612 `Permit`). Session 4 will add `signSettlementAuthorization` and `signGatewayBurnIntent`. In the interim, the "Pay" button in `debt_summary.html` references the removed function — it will be a no-op until Session 4.
+
+9. **`wallet.js` — no longer submits any on-chain transactions.** Removed `SETTLEMENT_ABI`, `ERC20_PERMIT_ABI`, and the contract interaction code. Added `SETTLEMENT_ADDRESSES` dict and utility getters (`getUsdcAddress`, `getSettlementAddress`) for future signing flows.
+
+#### Additional functions in `web3_utils.py` not in plan
+
+The existing file had these functions that the plan didn't mention but are still present:
+- `verify_signature(address, message, signature)` — used in `auth.py`
+- `recover_address(message, signature)` — used by `verify_signature`
+- `recover_pubkey(message, signature)` — used in `auth.py` for ECDH key recovery
+
+All preserved unchanged.
+
+#### Files modified
+
+| Action | File | Notes |
+|---|---|---|
+| Rewritten | `api/utils/web3_utils.py` | Chain IDs, tokens, all ABIs, helpers |
+| Edited | `config/settings.py` | RPC URLs, CONTRACT_SUBNAMES, CONTRACT_REPUTATION, CIRCLE_* |
+| Rewritten | `static/js/wallet.js` | Fixed chain IDs, removed settleWithPermit, signing-only |
+| Created | `api/utils/circle_gateway.py` | Full Gateway API client |
+| Updated | `.env.example` | All new env vars with defaults + proxy addresses |
+
+#### Verification
+
+| Check | Status |
+|---|---|
+| Chain IDs are testnet only | ✅ 11155111, 84532, 421614, 11155420, 5042002 |
+| All Python files parse (AST check) | ✅ |
+| Circle Gateway client exists and exports all functions | ✅ |
+| `.env.example` has all required vars | ✅ |
+| No existing imports broken | ✅ (auth.py imports verified) |
+| `manage.py check` | ⚠️ Cannot run locally (Docker-only env, no local Django) |
+
+### Session 2 — Completed
+
+**Date:** 2026-02-08
+
+#### Deviations from plan
+
+1. **Added `ens_namehash()` and `subname_node()` to `ens_codec.py`** — the plan didn't mention where to put namehash computation. It naturally belongs in the existing ENS codec utility alongside DNS decoding. `PARENT_NODE` (namehash of "khaalisplit.eth") is pre-computed at module level.
+
+2. **All on-chain calls in auth.py are non-blocking.** If `send_tx` fails (RPC down, no gas, etc.), the signup/wallet-link still succeeds. Errors are logged but don't block the user flow. This is critical for hackathon reliability.
+
+3. **`_get_backend_address()` helper added** to derive the backend wallet address from `BACKEND_PRIVATE_KEY`. Needed because `signup_view` registers the subname with the backend as initial owner (user hasn't linked a wallet yet).
+
+4. **Payment preferences use HTMX lazy-load** instead of being rendered server-side in the profile template. The profile page fires `hx-get="/api/profile/payment-preferences/"` on load. This avoids blocking the profile page render on chain reads.
+
+5. **`_read_payment_prefs()` reads from chain** via `call_view('subnames', 'text', ...)`. Falls back to defaults if the chain is unreachable. This means prefs are always fresh from on-chain state.
+
+6. **Plan said "Edit or Create `app/api/views/profile.py`"** — created as new file. Contains `_read_payment_prefs()`, `_prefs_context()`, and the `payment_preferences` view (GET + POST).
+
+7. **No Activity ActionType for SUBNAME_REGISTERED.** The plan suggested logging subname registration, but `Activity.ActionType` doesn't have a `SUBNAME_REGISTERED` choice. Reused `FRIEND_REQUEST` temporarily (same as the "account created" activity). A migration to add a proper type can be done later.
+
+8. **Plan step 2.2 (verify pubkey registration still works)** — no code changes needed. `register_pubkey()` already calls `register_pubkey_onchain()` which now uses `send_tx()` internally (refactored in Session 1). The `CONTRACT_FRIENDS` setting must be set in `.env` for it to work.
+
+#### Files modified
+
+| Action | File | Notes |
+|---|---|---|
+| Edited | `api/utils/ens_codec.py` | Added `ens_namehash()`, `subname_node()`, `PARENT_NODE` |
+| Edited | `api/views/auth.py` | Added `_register_subname_onchain()`, `_set_onchain_wallet_records()`, `_get_backend_address()` |
+| Created | `api/views/profile.py` | Payment preferences view (GET/POST) |
+| Created | `templates/partials/payment_preferences.html` | HTMX-driven payment prefs card |
+| Edited | `api/urls.py` | Added `/api/profile/payment-preferences/` route |
+| Edited | `templates/pages/profile.html` | Added HTMX load for payment prefs |
+
+#### Verification
+
+| Check | Status |
+|---|---|
+| All Python files parse (AST check) | ✅ |
+| New URL route added | ✅ `/api/profile/payment-preferences/` |
+| Template includes payment prefs partial | ✅ via HTMX lazy load |
+| Signup calls subname registration | ✅ `_register_subname_onchain()` |
+| Wallet linking sets addr + prefs + reputation | ✅ `_set_onchain_wallet_records()` |
+| Existing auth flow unchanged | ✅ imports verified, no signature changes |
+| `manage.py check` | ⚠️ Cannot run locally (Docker-only env) |
