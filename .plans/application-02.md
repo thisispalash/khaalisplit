@@ -508,13 +508,47 @@ After confirming all views point to new templates:
 1. `make tailwind` — builds
 2. `make server` — starts
 3. Visit every page: Nunito Sans body, Syne Mono addresses, no raw colors
-4. `grep -r "foreground/" app/templates/` — zero results
+4. `grep -r "foreground/" app/templates/` — zero results (except `hover:bg-foreground/90` on primary buttons, by design)
 5. `grep -rE "text-red|text-green|text-yellow|text-blue|text-purple" app/templates/` — zero results
 6. 375px viewport — nothing overflows, bottom nav visible, active tab highlighted
 7. 1024px+ — top nav visible, bottom nav hidden
 8. HTMX interactions: search, infinite scroll, expense add, settlement polling
 9. Hyperscript: wallet connect, sign/verify, encrypt/decrypt
 10. Toast notifications for all types
+
+### Implementation Notes (3)
+
+1. **`active_tab` also maps `/u/` paths to `profile` tab** since `photons/user-pill.html` links to `/u/<subname>/`.
+
+2. **`profile_public` view reworked.** Now does `User.objects.get(subname=subname)`, raises `Http404` if not found, and detects own-profile (redirects to editable form with `is_own_profile=True`). Both `profile()` and `profile_public()` render `pages/profile.html`.
+
+3. **Added `/u/<str:subname>/` URL route** in `web/urls.py` pointing to `profile_public` view. This is needed because `photons/user-pill.html` links to `/u/{{ user.subname }}/` (short URL pattern). The existing `/profile/<str:subname>/` route remains.
+
+4. **API partial wrappers live in `partials/`** — not in `prisms/` or `lenses/`. These are thin HTMX fragments returned by API views. The hierarchy:
+   - `partials/activity_list.html` — loops `lenses/activity-card.html` + infinite scroll sentinel
+   - `partials/search_results.html` — friend search results (inline, not using `lenses/friend-card.html` because search needs "Add Friend" action, not friend status display)
+   - `partials/pending_requests.html` — pending friend requests with accept/decline buttons
+   - `partials/member_list.html` — group members using `photons/user-pill.html` + `quanta/badge.html`
+   - `partials/expense_list.html` — includes `partials/expense_form.html` + loops `lenses/expense-card.html`
+   - `partials/expense_form.html` — uses `photons/form-field.html`, preserves Hyperscript encryption
+   - `partials/debt_summary.html` — uses `photons/debt-arrow.html`, preserves Hyperscript `settleWithPermit`
+
+5. **Direct lens/prism swaps (no wrapper needed):**
+   - `friends.send_request` / `friends.accept` → `lenses/friend-card.html`
+   - `groups.accept_invite` → `lenses/group-card.html`
+   - `expenses.update` → `lenses/expense-card.html`
+   - `settlement.status` → `lenses/settlement-card.html`
+   - `groups.balances` → `prisms/balance-summary.html`
+
+6. **`expenses.add` (POST success) returns `partials/expense_list.html` without `form`** in context, so the form is omitted from the response (only the card list refreshes). The `expense_list` GET includes `form=AddExpenseForm()`.
+
+7. **`settlement/partials/settle_form.html` dropped.** The manual settlement form was not referenced by any new template or view. Can be re-added later if needed.
+
+8. **Section 3.4 also deleted `partials/loading.html` and `partials/toast.html`** — the old generic partials replaced by `quanta/spinner.html` and `quanta/toast.html`. The `partials/` directory now only contains API wrapper fragments.
+
+9. **Section 3.5 (merge m/ app) skipped** — keeping mobile app separate for now.
+
+10. **All auth views in `api/views/auth.py` updated** — signup, login, onboarding profile, onboarding wallet, and verify_signature HTMX response all point to `pages/` templates. The `groups.create` POST error path also updated.
 
 ---
 
@@ -543,11 +577,25 @@ After confirming all views point to new templates:
 | **Rewrite** | `app/templates/base.html` (unified) | 2 |
 | **Delete** | `app/templates/base_desktop.html` | 2 |
 | **Delete** | `app/templates/base_mobile.html` | 2 |
-| **Create** | `app/templates/pages/` (12 files) | 2 |
+| **Create** | `app/templates/pages/` (11 files) | 2 |
 | **Edit** | `app/config/context_processors.py` | 3 |
 | **Edit** | `app/config/settings.py` | 3 |
 | **Edit** | `app/web/views.py` | 3 |
-| **Edit** | `app/api/views/*.py` | 3 |
-| **Delete** | Old template directories | 3 |
-| **Delete** | `app/m/` (optional) | 3 |
+| **Edit** | `app/web/urls.py` (add `/u/` route) | 3 |
+| **Edit** | `app/api/views/auth.py` | 3 |
+| **Edit** | `app/api/views/activity.py` | 3 |
+| **Edit** | `app/api/views/friends.py` | 3 |
+| **Edit** | `app/api/views/groups.py` | 3 |
+| **Edit** | `app/api/views/expenses.py` | 3 |
+| **Edit** | `app/api/views/settlement.py` | 3 |
+| **Create** | `app/templates/partials/` (7 API wrapper files) | 3 |
+| **Delete** | `app/templates/components/` | 3 |
+| **Delete** | `app/templates/auth/` | 3 |
+| **Delete** | `app/templates/activity/` | 3 |
+| **Delete** | `app/templates/friends/` | 3 |
+| **Delete** | `app/templates/groups/` | 3 |
+| **Delete** | `app/templates/expenses/` | 3 |
+| **Delete** | `app/templates/settlement/` | 3 |
+| **Delete** | `app/templates/partials/loading.html` | 3 |
+| **Delete** | `app/templates/partials/toast.html` | 3 |
 | (exists) | `app/static/font/` (3 TTF files) | — |
