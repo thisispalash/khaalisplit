@@ -45,10 +45,10 @@ interface IkhaaliSplitSettlement {
     // ──────────────────────────────────────────────
 
     /// @notice Placeholder for future approval-based settlement. Currently reverts.
-    /// @param recipient The recipient's wallet address.
+    /// @param recipientNode The ENS namehash of the recipient's subname.
     /// @param amount The USDC amount to settle.
     /// @param memo Arbitrary data (e.g. encrypted memo for off-chain indexing).
-    function settle(address recipient, uint256 amount, bytes calldata memo) external;
+    function settle(bytes32 recipientNode, uint256 amount, bytes calldata memo) external;
 
     /// @notice EIP-3009 authorization parameters.
     struct Authorization {
@@ -62,13 +62,13 @@ interface IkhaaliSplitSettlement {
     ///         Pulls USDC from sender via receiveWithAuthorization, reads recipient's
     ///         payment preferences from ENS text records, routes via Gateway or CCTP,
     ///         and updates the sender's reputation.
-    /// @param recipient    The recipient's wallet address.
-    /// @param amount       The USDC amount to settle.
-    /// @param memo         Arbitrary data (e.g. encrypted memo for off-chain indexing).
-    /// @param auth         EIP-3009 authorization parameters.
-    /// @param signature    EIP-3009 signature (packed r, s, v).
+    /// @param recipientNode The ENS namehash of the recipient's subname.
+    /// @param amount        The USDC amount to settle.
+    /// @param memo          Arbitrary data (e.g. encrypted memo for off-chain indexing).
+    /// @param auth          EIP-3009 authorization parameters.
+    /// @param signature     EIP-3009 signature (packed r, s, v).
     function settleWithAuthorization(
-        address recipient,
+        bytes32 recipientNode,
         uint256 amount,
         bytes calldata memo,
         Authorization calldata auth,

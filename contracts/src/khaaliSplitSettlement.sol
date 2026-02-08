@@ -102,7 +102,7 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     error ZeroAmount();
     error ZeroAddress();
     error TokenNotAllowed(address token);
-    error RecipientNotRegistered(address recipient);
+    error RecipientNotRegistered(bytes32 node);
     error SubnameRegistryNotSet();
     error GatewayWalletNotSet();
     error TokenMessengerNotSet();
@@ -150,7 +150,7 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
      * @dev Currently reverts with NotImplemented(). Reserved for when
      *      the approval-based flow is implemented in a future iteration.
      */
-    function settle(address, uint256, bytes calldata) external pure {
+    function settle(bytes32, uint256, bytes calldata) external pure {
         revert NotImplemented();
     }
 
@@ -162,8 +162,8 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
      * @notice Primary settlement function using EIP-3009 authorization.
      *
      * @dev Flow:
-     *      1. Validates inputs (amount, recipient, subname registry).
-     *      2. Looks up recipient's ENS node via addressToNode.
+     *      1. Validates inputs (amount, recipientNode, subname registry).
+     *      2. Resolves the recipient's wallet address from the ENS node.
      *      3. Resolves the token from recipient's text records.
      *      4. Calls receiveWithAuthorization on the USDC contract to pull tokens.
      *      5. Routes: Gateway (default) or CCTP (opt-in).
@@ -173,26 +173,26 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
      *      The sender signs a ReceiveWithAuthorization message with `to` = this contract.
      *      Anyone can submit the signature (enables offline/relayed settlements).
      *
-     * @param recipient    The recipient's wallet address.
-     * @param amount       The USDC amount to settle (in token decimals, e.g. 6 for USDC).
-     * @param memo         Arbitrary data (e.g. encrypted memo for off-chain indexing).
-     * @param auth         EIP-3009 authorization parameters (from, validAfter, validBefore, nonce).
-     * @param signature    EIP-3009 signature (packed r, s, v for EOA wallets).
+     * @param recipientNode The ENS namehash of the recipient's subname.
+     * @param amount        The USDC amount to settle (in token decimals, e.g. 6 for USDC).
+     * @param memo          Arbitrary data (e.g. encrypted memo for off-chain indexing).
+     * @param auth          EIP-3009 authorization parameters (from, validAfter, validBefore, nonce).
+     * @param signature     EIP-3009 signature (packed r, s, v for EOA wallets).
      */
     function settleWithAuthorization(
-        address recipient,
+        bytes32 recipientNode,
         uint256 amount,
         bytes calldata memo,
         Authorization calldata auth,
         bytes calldata signature
     ) external {
         if (amount == 0) revert ZeroAmount();
-        if (recipient == address(0)) revert ZeroAddress();
+        if (recipientNode == bytes32(0)) revert ZeroAddress();
         if (address(subnameRegistry) == address(0)) revert SubnameRegistryNotSet();
 
-        // Look up recipient's ENS node to read payment preferences
-        bytes32 recipientNode = subnameRegistry.addressToNode(recipient);
-        if (recipientNode == bytes32(0)) revert RecipientNotRegistered(recipient);
+        // Resolve the recipient's wallet address from their ENS node
+        address recipient = subnameRegistry.addr(recipientNode);
+        if (recipient == address(0)) revert RecipientNotRegistered(recipientNode);
 
         // Determine the token on the current chain from recipient's preferences
         address token = _resolveToken(recipientNode);

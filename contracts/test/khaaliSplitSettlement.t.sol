@@ -10,17 +10,12 @@ import {MockGatewayWallet} from "./helpers/MockGatewayWallet.sol";
 
 /**
  * @title MockSubnamesForSettlement
- * @notice Mock of khaaliSplitSubnames that implements addressToNode, text(), and addr()
+ * @notice Mock of khaaliSplitSubnames that implements text(), addr(), and setAddr()
  *         for settlement contract unit testing. Avoids the full NameWrapper dependency.
  */
 contract MockSubnamesForSettlement {
-    mapping(address => bytes32) public addressToNode;
     mapping(bytes32 => mapping(string => string)) private _texts;
     mapping(bytes32 => address) private _addresses;
-
-    function setAddressToNode(address user, bytes32 node) external {
-        addressToNode[user] = node;
-    }
 
     function setTextRecord(bytes32 node, string calldata key, string calldata value) external {
         _texts[node][key] = value;
@@ -152,7 +147,7 @@ contract khaaliSplitSettlementTest is Test {
         string memory tokenAddr, string memory chain,
         string memory flow, string memory cctpDomain
     ) internal {
-        subnameRegistry.setAddressToNode(recipient, node);
+        subnameRegistry.setAddr(node, recipient);
         subnameRegistry.setTextRecord(node, "com.khaalisplit.payment.token", tokenAddr);
         subnameRegistry.setTextRecord(node, "com.khaalisplit.payment.chain", chain);
         subnameRegistry.setTextRecord(node, "com.khaalisplit.payment.flow", flow);
@@ -231,7 +226,7 @@ contract khaaliSplitSettlementTest is Test {
 
     function test_settle_revertsNotImplemented() public {
         vm.expectRevert(khaaliSplitSettlement.NotImplemented.selector);
-        settlement.settle(bob, SETTLE_AMOUNT, "");
+        settlement.settle(BOB_NODE, SETTLE_AMOUNT, "");
     }
 
     // ══════════════════════════════════════════════
@@ -241,7 +236,7 @@ contract khaaliSplitSettlementTest is Test {
     function test_gateway_success() public {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(gatewayWallet.callCount(), 1);
         MockGatewayWallet.DepositForCall memory call = gatewayWallet.getCall(0);
@@ -255,13 +250,13 @@ contract khaaliSplitSettlementTest is Test {
         vm.prank(relayer);
         vm.expectEmit(true, true, false, true);
         emit khaaliSplitSettlement.SettlementCompleted(alice, bob, address(usdc), SETTLE_AMOUNT, 51, "");
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_gateway_updatesReputation() public {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(reputation.recordCallCount(), 1);
         assertEq(reputation.getReputation(alice), 51);
@@ -273,14 +268,14 @@ contract khaaliSplitSettlementTest is Test {
         vm.prank(relayer);
         vm.expectEmit(true, true, false, true);
         emit khaaliSplitSettlement.SettlementCompleted(alice, bob, address(usdc), SETTLE_AMOUNT, 51, memo);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, memo, auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, memo, auth, "");
     }
 
     function test_gateway_movesTokensCorrectly() public {
         uint256 aliceBefore = usdc.balanceOf(alice);
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(usdc.balanceOf(alice), aliceBefore - SETTLE_AMOUNT);
         assertEq(usdc.balanceOf(address(gatewayWallet)), SETTLE_AMOUNT);
@@ -291,7 +286,7 @@ contract khaaliSplitSettlementTest is Test {
         _registerRecipient(charlie, CHARLIE_NODE, _addressToHexString(address(usdc)), "8453", "", "");
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(gatewayWallet.callCount(), 1);
         assertEq(tokenMessenger.callCount(), 0);
@@ -301,7 +296,7 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         address randomSubmitter = makeAddr("random");
         vm.prank(randomSubmitter);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(gatewayWallet.callCount(), 1);
     }
@@ -310,7 +305,7 @@ contract khaaliSplitSettlementTest is Test {
         _registerRecipient(charlie, CHARLIE_NODE, _addressToHexString(address(usdc)), "8453", "someRandomFlow", "");
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(gatewayWallet.callCount(), 1);
         assertEq(tokenMessenger.callCount(), 0);
@@ -324,7 +319,7 @@ contract khaaliSplitSettlementTest is Test {
         _registerRecipient(charlie, CHARLIE_NODE, _addressToHexString(address(usdc)), "84532", "cctp", "6");
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(tokenMessenger.callCount(), 1);
         MockTokenMessengerV2.DepositForBurnCall memory call = tokenMessenger.getCall(0);
@@ -340,7 +335,7 @@ contract khaaliSplitSettlementTest is Test {
         vm.prank(relayer);
         vm.expectEmit(true, true, false, true);
         emit khaaliSplitSettlement.SettlementCompleted(alice, charlie, address(usdc), SETTLE_AMOUNT, 51, "");
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_cctp_revertsIfNoDomainInTextRecord() public {
@@ -348,7 +343,7 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.CctpDomainNotInTextRecord.selector);
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_cctp_revertsIfTokenMessengerNotSet() public {
@@ -358,7 +353,7 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.TokenMessengerNotSet.selector);
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_cctp_movesTokensCorrectly() public {
@@ -366,7 +361,7 @@ contract khaaliSplitSettlementTest is Test {
         uint256 aliceBefore = usdc.balanceOf(alice);
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
 
         assertEq(usdc.balanceOf(alice), aliceBefore - SETTLE_AMOUNT);
         assertEq(usdc.balanceOf(address(tokenMessenger)), SETTLE_AMOUNT);
@@ -378,7 +373,7 @@ contract khaaliSplitSettlementTest is Test {
         _registerRecipient(charlie, CHARLIE_NODE, _addressToHexString(address(usdc)), "11155111", "cctp", "0");
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(charlie, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(CHARLIE_NODE, SETTLE_AMOUNT, "", auth, "");
 
         MockTokenMessengerV2.DepositForBurnCall memory call = tokenMessenger.getCall(0);
         assertEq(call.destinationDomain, 0);
@@ -392,14 +387,14 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.ZeroAmount.selector);
-        settlement.settleWithAuthorization(bob, 0, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, 0, "", auth, "");
     }
 
-    function test_validation_revertsZeroRecipient() public {
+    function test_validation_revertsZeroRecipientNode() public {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.ZeroAddress.selector);
-        settlement.settleWithAuthorization(address(0), SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(bytes32(0), SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_validation_revertsIfSubnameRegistryNotSet() public {
@@ -409,15 +404,15 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.SubnameRegistryNotSet.selector);
-        fresh.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        fresh.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_validation_revertsIfRecipientNotRegistered() public {
-        address unregistered = makeAddr("unregistered");
+        bytes32 unregisteredNode = keccak256("unregistered.khaalisplit.eth");
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        vm.expectRevert(abi.encodeWithSelector(khaaliSplitSettlement.RecipientNotRegistered.selector, unregistered));
-        settlement.settleWithAuthorization(unregistered, SETTLE_AMOUNT, "", auth, "");
+        vm.expectRevert(abi.encodeWithSelector(khaaliSplitSettlement.RecipientNotRegistered.selector, unregisteredNode));
+        settlement.settleWithAuthorization(unregisteredNode, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_validation_revertsIfTokenNotAllowed() public {
@@ -426,7 +421,7 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(abi.encodeWithSelector(khaaliSplitSettlement.TokenNotAllowed.selector, fakeToken));
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_validation_revertsIfTokenTextRecordEmpty() public {
@@ -434,7 +429,7 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(abi.encodeWithSelector(khaaliSplitSettlement.TokenNotAllowed.selector, address(0)));
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_validation_revertsIfGatewayWalletNotSet() public {
@@ -443,7 +438,7 @@ contract khaaliSplitSettlementTest is Test {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
         vm.expectRevert(khaaliSplitSettlement.GatewayWalletNotSet.selector);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     // ══════════════════════════════════════════════
@@ -457,7 +452,7 @@ contract khaaliSplitSettlementTest is Test {
         vm.prank(relayer);
         vm.expectEmit(true, true, false, true);
         emit khaaliSplitSettlement.SettlementCompleted(alice, bob, address(usdc), SETTLE_AMOUNT, 500, "");
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 
     function test_reputation_notSet_skipsCall() public {
@@ -465,19 +460,19 @@ contract khaaliSplitSettlementTest is Test {
         settlement.setReputationContract(address(0));
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
         assertEq(reputation.recordCallCount(), 0);
     }
 
     function test_reputation_multipleSettlements() public {
         khaaliSplitSettlement.Authorization memory auth1 = _buildAuthWithNonce(alice, bytes32(uint256(1)));
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth1, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth1, "");
         assertEq(reputation.getReputation(alice), 51);
 
         khaaliSplitSettlement.Authorization memory auth2 = _buildAuthWithNonce(alice, bytes32(uint256(2)));
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth2, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth2, "");
         assertEq(reputation.getReputation(alice), 52);
     }
 
@@ -637,7 +632,7 @@ contract khaaliSplitSettlementTest is Test {
     function test_upgrade_preservesState() public {
         khaaliSplitSettlement.Authorization memory auth = _buildAuth(alice);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
 
         khaaliSplitSettlement newImpl = new khaaliSplitSettlement();
         vm.prank(owner);
@@ -659,10 +654,10 @@ contract khaaliSplitSettlementTest is Test {
         bytes32 nonce = bytes32(uint256(42));
         khaaliSplitSettlement.Authorization memory auth = _buildAuthWithNonce(alice, nonce);
         vm.prank(relayer);
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
 
         vm.prank(relayer);
         vm.expectRevert("FiatTokenV2: auth already used");
-        settlement.settleWithAuthorization(bob, SETTLE_AMOUNT, "", auth, "");
+        settlement.settleWithAuthorization(BOB_NODE, SETTLE_AMOUNT, "", auth, "");
     }
 }

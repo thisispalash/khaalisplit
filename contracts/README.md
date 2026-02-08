@@ -88,7 +88,7 @@ It serves as the on-chain resolver, storing text records and address records dir
 
 - Registration is backend-gated (`register(label, owner)`)
 - Supports `setText()` and `setAddr()` by the subname owner, backend, or reputation contract
-- `addressToNode()` provides reverse lookup (address → ENS namehash)
+- `addr(node)` provides forward lookup (ENS namehash → wallet address)
 - Implements ERC-165 (`ITextResolver`, `IAddrResolver`)
 
 ## Reputation
