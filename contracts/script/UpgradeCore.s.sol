@@ -12,12 +12,12 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
  * @notice Upgrades Friends, Groups, and Expenses proxies to new implementations
  *         that include backend relay functions (*For pattern).
  *
- * @dev Required environment variables:
- *   - DEPLOYER_PRIVATE_KEY: Private key for the owner EOA (must be proxy owner)
- *   - BACKEND_ADDRESS: Backend/relayer address to set on Groups and Expenses
- *   - FRIENDS_PROXY: Address of the khaaliSplitFriends proxy
- *   - GROUPS_PROXY: Address of the khaaliSplitGroups proxy
- *   - EXPENSES_PROXY: Address of the khaaliSplitExpenses proxy
+ * @dev Reads proxy addresses from `deployments.json` (keyed by chain ID).
+ *      Writes updated implementation addresses back after upgrade.
+ *
+ *      Required environment variables:
+ *        - DEPLOYER_PRIVATE_KEY: Private key for the owner EOA (must be proxy owner)
+ *        - BACKEND_ADDRESS: Backend/relayer address to set on Groups and Expenses
  *
  * Usage:
  *   forge script script/UpgradeCore.s.sol:UpgradeCore --rpc-url sepolia --broadcast --verify
@@ -26,9 +26,21 @@ contract UpgradeCore is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address backendAddress = vm.envAddress("BACKEND_ADDRESS");
-        address friendsProxy = vm.envAddress("FRIENDS_PROXY");
-        address groupsProxy = vm.envAddress("GROUPS_PROXY");
-        address expensesProxy = vm.envAddress("EXPENSES_PROXY");
+
+        // ── Read proxy addresses from deployments.json ──
+        string memory deploymentsPath = string.concat(vm.projectRoot(), "/deployments.json");
+        string memory json = vm.readFile(deploymentsPath);
+        string memory chainId = vm.toString(block.chainid);
+
+        string memory basePath = string.concat(".", chainId);
+        address friendsProxy = vm.parseJsonAddress(json, string.concat(basePath, ".proxy.khaaliSplitFriends"));
+        address groupsProxy = vm.parseJsonAddress(json, string.concat(basePath, ".proxy.khaaliSplitGroups"));
+        address expensesProxy = vm.parseJsonAddress(json, string.concat(basePath, ".proxy.khaaliSplitExpenses"));
+
+        console.log("Chain ID:", chainId);
+        console.log("Friends proxy:", friendsProxy);
+        console.log("Groups proxy:", groupsProxy);
+        console.log("Expenses proxy:", expensesProxy);
 
         vm.startBroadcast(deployerPrivateKey);
 
@@ -61,9 +73,15 @@ contract UpgradeCore is Script {
 
         vm.stopBroadcast();
 
+        // ── Update impl addresses in deployments.json ──
+        vm.writeJson(vm.toString(newFriendsImpl), deploymentsPath, string.concat(basePath, ".impl.khaaliSplitFriends"));
+        vm.writeJson(vm.toString(newGroupsImpl), deploymentsPath, string.concat(basePath, ".impl.khaaliSplitGroups"));
+        vm.writeJson(vm.toString(newExpensesImpl), deploymentsPath, string.concat(basePath, ".impl.khaaliSplitExpenses"));
+
         console.log("\n=== Upgrade Summary ===");
         console.log("Friends proxy:", friendsProxy, "-> impl:", newFriendsImpl);
         console.log("Groups proxy:", groupsProxy, "-> impl:", newGroupsImpl);
         console.log("Expenses proxy:", expensesProxy, "-> impl:", newExpensesImpl);
+        console.log("\ndeployments.json updated with new impl addresses");
     }
 }

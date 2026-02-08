@@ -434,5 +434,12 @@ Per discussion, all three interfaces (`IkhaaliSplitFriends`, `IkhaaliSplitGroups
 - **Expenses**: 15 existing + 12 relay tests (including setBackend) = 27 total
 - **Full suite**: 331 tests, 0 failures
 
+### Upgrade script reads from `deployments.json`
+The plan originally had proxy addresses passed as env vars (`FRIENDS_PROXY`, `GROUPS_PROXY`, `EXPENSES_PROXY`). Updated to read from `deployments.json` using `block.chainid` — same source of truth, no duplication. The script also writes back updated impl addresses after upgrade, so step 1.9 is handled automatically.
+
 ### Deployment — NOT done
-Upgrade script (`script/UpgradeCore.s.sol`) is ready but deployment to Sepolia will be done manually. The `deployments.json` implementation addresses will be updated after deployment.
+Upgrade script (`script/UpgradeCore.s.sol`) is ready but deployment to Sepolia will be done manually. Usage:
+```bash
+forge script script/UpgradeCore.s.sol:UpgradeCore --rpc-url sepolia --broadcast --verify
+```
+Only `DEPLOYER_PRIVATE_KEY` and `BACKEND_ADDRESS` env vars needed — proxy addresses come from `deployments.json`.
