@@ -1,0 +1,56 @@
+{% comment %}
+  prisms/nav-header.html — Desktop navigation header
+  Desktop only (hidden md:block). Logo + nav links + wallet button + logout.
+  Composes: photons/wallet-button.html
+  Replaces: components/header.html
+{% endcomment %}
+
+<header class="hidden md:block border-b border-border">
+  <nav class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+
+    {# Logo / Home link #}
+    <a href="/" class="text-xl font-bold text-foreground hover:text-muted transition-colors">
+      khaali<span class="text-muted">Split</span>
+    </a>
+
+    {# Navigation links (shown when logged in) #}
+    {% if user.is_authenticated %}
+    <div class="flex items-center gap-6 text-sm">
+      <a href="/friends/"
+        class="text-muted hover:text-foreground transition-colors">
+        Friends
+      </a>
+      <a href="/groups/"
+        class="text-muted hover:text-foreground transition-colors">
+        Groups
+      </a>
+      <a href="/profile/"
+        class="text-muted hover:text-foreground transition-colors">
+        {{ user.subname }}
+      </a>
+    </div>
+    {% endif %}
+
+    {# Wallet connection status + auth actions #}
+    <div id="wallet-status" class="flex items-center gap-3">
+      {% if user.is_authenticated %}
+        {% include 'photons/wallet-button.html' %}
+        <form method="post" action="/api/auth/logout/">
+          {% csrf_token %}
+          <button type="submit"
+            class="text-xs text-subtle hover:text-muted transition-colors cursor-pointer">
+            Logout
+          </button>
+        </form>
+      {% else %}
+        <a href="/api/auth/signup/"
+          class="px-3 py-1.5 text-xs border border-border rounded-md
+                 text-muted hover:text-foreground hover:border-border-hover
+                 transition-colors">
+          Get Started
+        </a>
+      {% endif %}
+    </div>
+
+  </nav>
+</header>

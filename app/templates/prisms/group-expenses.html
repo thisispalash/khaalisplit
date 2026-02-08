@@ -1,0 +1,21 @@
+{% comment %}
+  prisms/group-expenses.html — Expense form + expense list
+  Context:
+    group : group object (.group_id)
+    form  : ExpenseForm (bound, from view context)
+  Composes: photons/form-field.html, lenses/expense-card.html
+  Used by: pages/group-detail.html
+  Note: This is an HTMX-loaded section. The expense_list API response
+  should return this template (or its content partial) for hx-swap.
+{% endcomment %}
+
+<div class="space-y-3">
+  <h2 class="text-sm font-medium text-muted">Expenses</h2>
+
+  <div id="expense-list"
+    hx-get="/api/expenses/{{ group.group_id }}/list/"
+    hx-trigger="load"
+    hx-swap="innerHTML">
+    {% include 'quanta/spinner.html' %}
+  </div>
+</div>

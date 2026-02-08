@@ -1,0 +1,31 @@
+{% comment %}
+  lenses/friend-card.html — Friend list item with status and actions
+  Context:
+    friend_user : user object (.subname, .display_name, .addresses.first.address)
+    status      : 'pending_sent' | 'accepted'
+  Replaces: friends/partials/friend_card.html
+  Composes: photons/user-pill.html, quanta/badge.html
+{% endcomment %}
+
+<div class="flex items-center justify-between p-3 border border-border rounded-md"
+  id="friend-{{ friend_user.subname }}">
+  <div>
+    {% include 'photons/user-pill.html' with user=friend_user link="true" size="md" %}
+  </div>
+  <div class="flex items-center gap-2">
+    {% if status == 'pending_sent' %}
+      {% include 'quanta/badge.html' with status='pending' label='Request sent' %}
+    {% elif status == 'accepted' %}
+      {% include 'quanta/badge.html' with status='accepted' label='Friends' %}
+      <button
+        class="text-xs text-subtle hover:text-foreground transition-colors cursor-pointer"
+        hx-post="/api/friends/remove/{{ friend_user.subname }}/"
+        hx-target="#friend-{{ friend_user.subname }}"
+        hx-swap="outerHTML"
+        hx-confirm="Remove {{ friend_user.subname }} as a friend?"
+      >
+        Remove
+      </button>
+    {% endif %}
+  </div>
+</div>

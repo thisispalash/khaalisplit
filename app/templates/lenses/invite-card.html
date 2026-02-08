@@ -1,0 +1,28 @@
+{% comment %}
+  lenses/invite-card.html — Group invitation card with accept action
+  Context:
+    group : group object (.group_id, .name, .member_count, .creator.subname)
+  Replaces: inline invite block in groups/list.html
+  Composes: quanta/button.html
+{% endcomment %}
+
+<div class="p-4 border border-border rounded-md bg-surface-raised"
+  id="invite-{{ group.group_id }}">
+  <div class="flex items-center justify-between">
+    <div>
+      <h3 class="font-medium">{{ group.name|default:"Unnamed Group" }}</h3>
+      <p class="text-xs text-subtle mt-1">
+        {{ group.member_count }} member{{ group.member_count|pluralize }}
+        &middot; Created by {{ group.creator.subname }}
+      </p>
+    </div>
+    <button
+      class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer bg-foreground text-background hover:bg-foreground/90 px-3 py-1 text-xs"
+      hx-post="/api/groups/{{ group.group_id }}/accept/"
+      hx-target="#invite-{{ group.group_id }}"
+      hx-swap="outerHTML"
+    >
+      Accept
+    </button>
+  </div>
+</div>

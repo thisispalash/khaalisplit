@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ group.name|default:"Group" }} — khaaliSplit{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">{{ group.name|default:"Unnamed Group" }}</h1>
+      <p class="text-sm text-subtle">
+        {{ group.member_count }} member{{ group.member_count|pluralize }}
+        &middot; Created by {{ group.creator.subname }}
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/settle/{{ group.group_id }}/"
+        class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
+               bg-foreground text-background hover:bg-foreground/90 px-3 py-1 text-xs">
+        Settle Up
+      </a>
+      {% if is_member %}
+      <button
+        class="inline-flex items-center justify-center rounded-md font-medium transition-colors cursor-pointer
+               border border-border text-muted hover:text-foreground hover:border-border-hover px-3 py-2 text-xs"
+        hx-post="/api/groups/{{ group.group_id }}/leave/"
+        hx-confirm="Leave this group?"
+        hx-target="#group-content"
+        hx-swap="innerHTML"
+      >
+        Leave
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="group-content" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    {# Members section #}
+    {% include 'prisms/group-members.html' %}
+
+    {# Balances section #}
+    {% include 'prisms/balance-summary.html' %}
+
+  </div>
+
+  {# Expenses section #}
+  {% include 'prisms/group-expenses.html' %}
+
+</div>
+{% endblock %}

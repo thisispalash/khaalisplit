@@ -1,0 +1,19 @@
+{% comment %}
+  quanta/empty-state.html — Empty state placeholder
+  Params:
+    title    : string (required)
+    subtitle : string / omit
+    actions  : safe HTML string for action buttons / omit
+{% endcomment %}
+
+<div class="text-center py-8 space-y-2">
+  <p class="text-muted text-sm">{{ title }}</p>
+  {% if subtitle %}
+    <p class="text-subtle text-xs">{{ subtitle }}</p>
+  {% endif %}
+  {% if actions %}
+    <div class="flex items-center justify-center gap-3 mt-4">
+      {{ actions }}
+    </div>
+  {% endif %}
+</div>

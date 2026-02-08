@@ -1,6 +1,97 @@
 @import "tailwindcss";
 
-:root {
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("/static/font/NunitoSans.ttf") format("truetype");
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Nunito Sans";
+  src: url("/static/font/NunitoSansItalic.ttf") format("truetype");
+  font-weight: 200 1000;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Syne Mono";
+  src: url("/static/font/SyneMono.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* ── Base Colors (unchanged) ─────────────────────────────────── */
   --color-background: oklch(15.434% 0 none);
   --color-foreground: oklch(90.537% 0.1574 142.27);
+
+  /* ── Semantic Colors (all derived via color-mix) ─────────────── */
+  --color-surface:        color-mix(in oklch, var(--color-background) 95%, var(--color-foreground));
+  --color-surface-raised: color-mix(in oklch, var(--color-background) 90%, var(--color-foreground));
+  --color-border:         color-mix(in oklch, var(--color-background) 85%, var(--color-foreground));
+  --color-border-hover:   color-mix(in oklch, var(--color-background) 75%, var(--color-foreground));
+  --color-muted:          color-mix(in oklch, var(--color-background) 50%, var(--color-foreground));
+  --color-subtle:         color-mix(in oklch, var(--color-background) 65%, var(--color-foreground));
+  --color-accent:         var(--color-foreground);
+  --color-accent-muted:   color-mix(in oklch, var(--color-background) 90%, var(--color-foreground));
+
+  /* Status shades — different mix ratios for visual hierarchy, all green+black */
+  --color-emphasis:       color-mix(in oklch, var(--color-background) 25%, var(--color-foreground));
+  --color-emphasis-muted: color-mix(in oklch, var(--color-background) 92%, var(--color-foreground));
+  --color-dim:            color-mix(in oklch, var(--color-background) 70%, var(--color-foreground));
+  --color-dim-muted:      color-mix(in oklch, var(--color-background) 95%, var(--color-foreground));
+
+  /* ── Typography ──────────────────────────────────────────────── */
+  --font-sans: "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Syne Mono", ui-monospace, monospace;
+
+  /* ── Spacing ─────────────────────────────────────────────────── */
+  --spacing: 4px;
+
+  /* ── Breakpoints ─────────────────────────────────────────────── */
+  --breakpoint-xs: 375px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+
+  /* ── Border Radius ───────────────────────────────────────────── */
+  --radius-sm:   calc(var(--spacing) * 1);
+  --radius-md:   calc(var(--spacing) * 2);
+  --radius-lg:   calc(var(--spacing) * 3);
+  --radius-xl:   calc(var(--spacing) * 4);
+  --radius-full: 9999px;
+
+  /* ── Animations ──────────────────────────────────────────────── */
+  --animate-fade-in:    fade-in 200ms ease-out;
+  --animate-slide-up:   slide-up 300ms ease-out;
+  --animate-slide-down: slide-down 300ms ease-out;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+  --animate-skeleton:   skeleton 1.5s ease-in-out infinite;
+}
+
+@keyframes fade-in    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-up   { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slide-down { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes skeleton   { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+@layer base {
+  * { border-color: var(--color-border); }
+  body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+  input[type="text"], input[type="password"], input[type="email"],
+  input[type="number"], input[type="url"], input[type="search"],
+  input[type="tel"], select, textarea {
+    width: 100%;
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-foreground);
+    font-size: 0.875rem;
+  }
+  input::placeholder, textarea::placeholder { color: var(--color-subtle); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-border-hover); }
 }

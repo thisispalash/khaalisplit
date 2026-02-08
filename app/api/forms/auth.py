@@ -11,18 +11,12 @@ class SignupForm(forms.Form):
   password = forms.CharField(
     min_length=8,
     widget=forms.PasswordInput(attrs={
-      'class': 'w-full px-3 py-2 bg-background border border-foreground/20 rounded-md '
-               'text-foreground placeholder-foreground/40 focus:outline-none '
-               'focus:border-foreground/40',
       'placeholder': 'Choose a password (min 8 chars)',
       'autocomplete': 'new-password',
     }),
   )
   password_confirm = forms.CharField(
     widget=forms.PasswordInput(attrs={
-      'class': 'w-full px-3 py-2 bg-background border border-foreground/20 rounded-md '
-               'text-foreground placeholder-foreground/40 focus:outline-none '
-               'focus:border-foreground/40',
       'placeholder': 'Confirm password',
       'autocomplete': 'new-password',
     }),
@@ -42,18 +36,12 @@ class LoginForm(forms.Form):
   subname = forms.CharField(
     max_length=100,
     widget=forms.TextInput(attrs={
-      'class': 'w-full px-3 py-2 bg-background border border-foreground/20 rounded-md '
-               'text-foreground placeholder-foreground/40 focus:outline-none '
-               'focus:border-foreground/40',
       'placeholder': 'Your subname (e.g. cool-tiger)',
       'autocomplete': 'username',
     }),
   )
   password = forms.CharField(
     widget=forms.PasswordInput(attrs={
-      'class': 'w-full px-3 py-2 bg-background border border-foreground/20 rounded-md '
-               'text-foreground placeholder-foreground/40 focus:outline-none '
-               'focus:border-foreground/40',
       'placeholder': 'Password',
       'autocomplete': 'current-password',
     }),
@@ -68,15 +56,9 @@ class ProfileForm(forms.ModelForm):
     fields = ['display_name', 'avatar_url']
     widgets = {
       'display_name': forms.TextInput(attrs={
-        'class': 'w-full px-3 py-2 bg-background border border-foreground/20 rounded-md '
-                 'text-foreground placeholder-foreground/40 focus:outline-none '
-                 'focus:border-foreground/40',
         'placeholder': 'Display name (optional)',
       }),
       'avatar_url': forms.URLInput(attrs={
-        'class': 'w-full px-3 py-2 bg-background border border-foreground/20 rounded-md '
-                 'text-foreground placeholder-foreground/40 focus:outline-none '
-                 'focus:border-foreground/40',
         'placeholder': 'Avatar URL (optional)',
       }),
     }

@@ -1,0 +1,20 @@
+{% comment %}
+  photons/search-bar.html — HTMX-powered search input with debounce
+  Params:
+    name        : input name (default: "q")
+    placeholder : string (default: "Search...")
+    hx_get      : URL for search endpoint (required)
+    hx_target   : CSS selector for results container (required)
+  Preserves: hx-trigger="keyup changed delay:300ms" debounce pattern
+{% endcomment %}
+
+<div>
+  <input type="text"
+    name="{{ name|default:'q' }}"
+    placeholder="{{ placeholder|default:'Search...' }}"
+    hx-get="{{ hx_get }}"
+    hx-trigger="keyup changed delay:300ms"
+    hx-target="{{ hx_target }}"
+  >
+  <div id="{{ hx_target|cut:'#' }}" class="mt-2"></div>
+</div>

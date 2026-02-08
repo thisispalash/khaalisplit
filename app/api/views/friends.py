@@ -39,7 +39,7 @@ def search(request):
     .values_list('friend_user_id', flat=True)
   )
 
-  return render(request, 'friends/partials/search_results.html', {
+  return render(request, 'partials/search_results.html', {
     'results': results,
     'friend_ids': friend_addresses,
   })
@@ -94,7 +94,7 @@ def send_request(request, subname):
 
   request._wide_event['extra']['friend_request_to'] = subname
 
-  return render(request, 'friends/partials/friend_card.html', {
+  return render(request, 'lenses/friend-card.html', {
     'friend_user': friend_user,
     'status': 'pending_sent',
   })
@@ -102,17 +102,17 @@ def send_request(request, subname):
 
 @login_required(login_url='/api/auth/login/')
 @require_POST
-def accept(request, address):
-  """Accept a friend request from the given address."""
+def accept(request, subname):
+  """Accept a friend request from the given subname."""
   # Find the incoming request
   incoming = CachedFriend.objects.filter(
     user=request.user,
-    friend_address=address,
+    friend_user__subname=subname,
     status=CachedFriend.Status.PENDING_RECEIVED,
   ).first()
 
   if not incoming:
-    return HttpResponse('No pending request from this address', status=404)
+    return HttpResponse('No pending request from this user', status=404)
 
   # Accept both sides
   incoming.status = CachedFriend.Status.ACCEPTED
@@ -127,12 +127,12 @@ def accept(request, address):
   Activity.objects.create(
     user=request.user,
     action_type=Activity.ActionType.FRIEND_ACCEPTED,
-    message=f'Accepted friend request from {incoming.friend_user.subname if incoming.friend_user else address[:10]}',
+    message=f'Accepted friend request from {subname}',
   )
 
-  request._wide_event['extra']['friend_accepted'] = address
+  request._wide_event['extra']['friend_accepted'] = subname
 
-  return render(request, 'friends/partials/friend_card.html', {
+  return render(request, 'lenses/friend-card.html', {
     'friend_user': incoming.friend_user,
     'status': 'accepted',
   })
@@ -140,11 +140,11 @@ def accept(request, address):
 
 @login_required(login_url='/api/auth/login/')
 @require_POST
-def remove(request, address):
+def remove(request, subname):
   """Remove a friend relationship."""
   friend = CachedFriend.objects.filter(
     user=request.user,
-    friend_address=address,
+    friend_user__subname=subname,
   ).first()
 
   if not friend:
@@ -163,7 +163,7 @@ def remove(request, address):
     Activity.objects.create(
       user=request.user,
       action_type=Activity.ActionType.FRIEND_REMOVED,
-      message=f'Removed friend {friend.friend_user.subname}',
+      message=f'Removed friend {subname}',
     )
 
   return HttpResponse('')  # Empty response removes the card via HTMX swap
@@ -178,6 +178,6 @@ def pending(request):
     status=CachedFriend.Status.PENDING_RECEIVED,
   ).select_related('friend_user')
 
-  return render(request, 'friends/partials/pending_requests.html', {
+  return render(request, 'partials/pending_requests.html', {
     'pending': pending_requests,
   })

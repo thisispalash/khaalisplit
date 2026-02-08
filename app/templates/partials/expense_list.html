@@ -1,0 +1,24 @@
+{% comment %}
+  partials/expense_list.html — HTMX partial for expense form + expense cards
+  Context:
+    expenses : queryset of CachedExpense objects
+    group    : group object (.group_id)
+    form     : AddExpenseForm (optional, included when loading full list)
+  Composes: partials/expense_form.html, lenses/expense-card.html
+{% endcomment %}
+
+<div id="expense-list" class="space-y-3">
+
+  {% if form %}
+    {% include 'partials/expense_form.html' %}
+  {% endif %}
+
+  {% for expense in expenses %}
+    {% include 'lenses/expense-card.html' %}
+  {% empty %}
+    <p class="text-subtle text-sm py-2">
+      No expenses yet. Add the first one above!
+    </p>
+  {% endfor %}
+
+</div>

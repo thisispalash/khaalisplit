@@ -9,21 +9,35 @@
     <meta name="author" content="@theprimefibber">
     <meta name="robots" content="index, follow">
 
+    {# PWA meta (merged from base_mobile.html) #}
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a1a">
+    <link rel="manifest" href="{% static 'm/manifest.json' %}">
+
     <title>
       {% block title %}khaaliSplit{% endblock %}
     </title>
 
+    {# Google Fonts CDN fallback #}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Syne+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/tw.css' %}">
+
+    <script src="{% static 'js/htmx@2.0.8.js' %}"></script>
+    <script src="{% static 'js/htmx-ext-ws@2.0.4.js' %}"></script>
+    <script src="{% static 'js/_hyperscript@0.9.14.js' %}"></script>
+    <script type="module">
+      import * as ethers from '{% static "js/ethers@6.7.0.js" %}';
+      window.ethers = ethers;
+    </script>
+
     {% block extra_head %}{% endblock %}
   </head>
 
-  <script src="{% static 'js/htmx@2.0.8.js' %}"></script>
-  <script src="{% static 'js/htmx-ext-ws@2.0.4.js' %}"></script>
-  <script src="{% static 'js/_hyperscript@0.9.14.js' %}"></script>
-  <script src="{% static 'js/ethers@6.7.0.js' %}"></script>
-
   <body
-    class="min-h-screen w-full bg-background text-foreground flex flex-col"
+    class="min-h-screen w-full bg-background text-foreground font-sans flex flex-col"
     _="
       on load
         set global walletConnected to false
@@ -33,31 +47,36 @@
     "
   >
 
-    {% include 'components/header.html' %}
+    {# Desktop navigation #}
+    {% include 'prisms/nav-header.html' %}
 
     {# Toast container for OOB swaps #}
     <div id="toast-container"
       class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
     ></div>
 
-    <main class="max-w-4xl mx-auto px-4 py-8 flex-1 w-full">
+    <main class="max-w-4xl mx-auto px-4 py-8 pb-20 md:pb-8 flex-1 w-full">
       {% block content %}
       {% endblock %}
     </main>
 
-    {% include 'components/footer.html' %}
+    {# Desktop footer #}
+    {% include 'prisms/footer.html' %}
+
+    {# Mobile bottom navigation #}
+    {% include 'prisms/bottom-nav.html' %}
+
+    <script src="{% static 'js/crypto.js' %}" defer></script>
+    <script src="{% static 'js/wallet.js' %}" defer></script>
+    <script src="{% static 'js/app.js' %}" defer></script>
+
+    {% block extra_js %}{% endblock %}
+
+    {% if GOATCOUNTER_URL %}
+    <script src="{% static 'js/goat.js' %}" defer
+      data-goatcounter="{{ GOATCOUNTER_URL }}"></script>
+    {% endif %}
 
   </body>
-
-  <script src="{% static 'js/crypto.js' %}" defer></script>
-  <script src="{% static 'js/wallet.js' %}" defer></script>
-  <script src="{% static 'js/app.js' %}" defer></script>
-
-  {% block extra_js %}{% endblock %}
-
-  {% if GOATCOUNTER_URL %}
-  <script src="{% static 'js/goat.js' %}" defer
-    data-goatcounter="{{ GOATCOUNTER_URL }}"></script>
-  {% endif %}
 
 </html>

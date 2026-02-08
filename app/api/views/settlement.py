@@ -72,7 +72,7 @@ def debts(request, group_id):
     debt['is_payer'] = debt['from_address'].lower() == user_address
     debt['is_payee'] = debt['to_address'].lower() == user_address
 
-  return render(request, 'settlement/partials/debt_summary.html', {
+  return render(request, 'partials/debt_summary.html', {
     'debts': enriched_debts,
     'group': group,
   })
@@ -159,6 +159,6 @@ def status(request, tx_hash):
   if not settlement:
     return HttpResponse('Settlement not found', status=404)
 
-  return render(request, 'settlement/partials/settlement_status.html', {
+  return render(request, 'lenses/settlement-card.html', {
     'settlement': settlement,
   })

@@ -13,4 +13,5 @@ urlpatterns = [
   path('settle/<int:group_id>/', views.settle, name='settle'),
   path('profile/', views.profile, name='profile'),
   path('profile/<str:subname>/', views.profile_public, name='profile-public'),
+  path('u/<str:subname>/', views.profile_public, name='profile-short'),
 ]

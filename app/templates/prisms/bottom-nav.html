@@ -1,0 +1,46 @@
+{% comment %}
+  prisms/bottom-nav.html — Mobile bottom navigation bar
+  Mobile only (md:hidden, fixed bottom-0). 4 tabs: Activity, Friends, Groups, Profile.
+  Composes: quanta/icon.html
+  Requires: active_tab in context (wired in Session 3)
+{% endcomment %}
+
+{% if user.is_authenticated %}
+<nav class="md:hidden fixed bottom-0 inset-x-0 bg-background border-t border-border z-40">
+  <div class="flex items-center justify-around py-2">
+
+    <a href="/"
+      class="flex flex-col items-center gap-1 px-3 py-1 text-xs
+             {% if active_tab == 'activity' %}text-foreground{% else %}text-subtle{% endif %}
+             hover:text-foreground transition-colors">
+      {% include 'quanta/icon.html' with name='activity' size='md' %}
+      <span>Activity</span>
+    </a>
+
+    <a href="/friends/"
+      class="flex flex-col items-center gap-1 px-3 py-1 text-xs
+             {% if active_tab == 'friends' %}text-foreground{% else %}text-subtle{% endif %}
+             hover:text-foreground transition-colors">
+      {% include 'quanta/icon.html' with name='friend' size='md' %}
+      <span>Friends</span>
+    </a>
+
+    <a href="/groups/"
+      class="flex flex-col items-center gap-1 px-3 py-1 text-xs
+             {% if active_tab == 'groups' %}text-foreground{% else %}text-subtle{% endif %}
+             hover:text-foreground transition-colors">
+      {% include 'quanta/icon.html' with name='group' size='md' %}
+      <span>Groups</span>
+    </a>
+
+    <a href="/profile/"
+      class="flex flex-col items-center gap-1 px-3 py-1 text-xs
+             {% if active_tab == 'profile' %}text-foreground{% else %}text-subtle{% endif %}
+             hover:text-foreground transition-colors">
+      {% include 'quanta/icon.html' with name='profile' size='md' %}
+      <span>Profile</span>
+    </a>
+
+  </div>
+</nav>
+{% endif %}

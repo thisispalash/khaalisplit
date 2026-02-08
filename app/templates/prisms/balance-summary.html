@@ -1,0 +1,18 @@
+{% comment %}
+  prisms/balance-summary.html — HTMX-loaded balance/debt section
+  Context:
+    group : group object (.group_id)
+  Composes: photons/debt-arrow.html, quanta/amount.html, quanta/spinner.html
+  Used by: pages/group-detail.html, pages/settle.html
+  Note: The debt data is loaded via HTMX. The API response
+  returns the debt_summary partial which we'll update in Session 3.
+{% endcomment %}
+
+<div id="balance-summary" class="space-y-3">
+  <h2 class="text-sm font-medium text-muted">Balances</h2>
+  <div hx-get="/api/settle/{{ group.group_id }}/debts/"
+    hx-trigger="load"
+    hx-swap="innerHTML">
+    {% include 'quanta/spinner.html' %}
+  </div>
+</div>

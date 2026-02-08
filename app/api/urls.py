@@ -23,8 +23,8 @@ urlpatterns = [
   # Friends
   path('friends/search/', friends_views.search, name='friends-search'),
   path('friends/request/<str:subname>/', friends_views.send_request, name='friends-request'),
-  path('friends/accept/<str:address>/', friends_views.accept, name='friends-accept'),
-  path('friends/remove/<str:address>/', friends_views.remove, name='friends-remove'),
+  path('friends/accept/<str:subname>/', friends_views.accept, name='friends-accept'),
+  path('friends/remove/<str:subname>/', friends_views.remove, name='friends-remove'),
   path('friends/pending/', friends_views.pending, name='friends-pending'),
 
   # Groups
