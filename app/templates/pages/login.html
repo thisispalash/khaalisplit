@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Log In — khaaliSplit{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-16">
+
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold mb-2">Welcome Back</h1>
+    <p class="text-muted text-sm">
+      Log in with your subname and password.
+    </p>
+  </div>
+
+  <form method="post" action="/api/auth/login/" class="space-y-4">
+    {% csrf_token %}
+
+    {% include 'photons/form-errors.html' with errors=form.non_field_errors %}
+
+    {% include 'photons/form-field.html' with field=form.subname label='Subname' %}
+    {% include 'photons/form-field.html' with field=form.password label='Password' %}
+
+    {% include 'quanta/button.html' with variant='primary' type='submit' label='Log In' full_width='true' %}
+  </form>
+
+  <p class="text-center text-sm text-muted mt-6">
+    Don't have an account?
+    <a href="/api/auth/signup/" class="text-foreground underline underline-offset-2 hover:text-muted">
+      Sign up
+    </a>
+  </p>
+
+</div>
+{% endblock %}

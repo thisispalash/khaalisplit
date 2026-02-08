@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Connect Wallet — khaaliSplit{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-16">
+
+  <div class="text-center mb-8">
+    <h1 class="text-2xl font-bold mb-2">Connect Your Wallet</h1>
+    <p class="text-muted text-sm">
+      Link an Ethereum wallet to send and receive payments.
+      <br>Your wallet's public key enables encrypted group chats.
+    </p>
+  </div>
+
+  {# Progress indicator — step 2 of 2 #}
+  {% include 'photons/step-indicator.html' with current=2 total=2 %}
+
+  {% if success %}
+  <div class="text-center space-y-4">
+    <div class="text-emphasis text-lg font-medium">Wallet linked!</div>
+    <p class="text-muted text-sm">
+      {{ linked_address.address|truncatechars:14 }} has been connected.
+    </p>
+    {% include 'quanta/button.html' with variant='primary' href='/' label='Start Splitting' %}
+  </div>
+  {% else %}
+
+  <div id="wallet-connect-area" class="space-y-4">
+
+    {# Connect wallet button #}
+    <button
+      id="onboarding-connect-btn"
+      class="w-full py-3 border border-border rounded-md text-muted
+             hover:text-foreground hover:border-border-hover transition-colors cursor-pointer"
+      _="
+        on click
+          call window.connectWallet()
+        end
+        on walletChanged from body
+          if walletConnected
+            set #connected-address's textContent to walletAddress
+            remove .hidden from #sign-section
+            add .hidden to me
+          end
+        end
+      "
+    >
+      Connect Wallet
+    </button>
+
+    {# Sign message section (hidden until connected) #}
+    <div id="sign-section" class="hidden space-y-3">
+      <p class="text-sm text-muted">Connected:</p>
+      <p id="connected-address" class="font-mono text-sm text-foreground break-all"></p>
+
+      <button
+        id="sign-btn"
+        class="w-full py-2.5 bg-foreground text-background font-medium rounded-md
+               hover:bg-foreground/90 transition-colors cursor-pointer"
+        _="
+          on click
+            set msg to 'khaaliSplit: Link wallet ' + walletAddress + ' to {{ user.subname }}'
+            call window.signMessage(msg)
+            then set sig to it
+            if sig
+              fetch /api/auth/address/verify/ {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                  address: walletAddress,
+                  signature: sig,
+                  message: msg
+                })
+              }
+              then if the result's ok
+                go to url /
+              else
+                set #sign-error's textContent to 'Verification failed. Try again.'
+                remove .hidden from #sign-error
+              end
+            end
+          end
+        "
+      >
+        Sign & Verify
+      </button>
+
+      <p id="sign-error" class="hidden text-foreground text-sm text-center"></p>
+    </div>
+  </div>
+
+  <div class="text-center mt-6">
+    <a href="/"
+      class="text-sm text-subtle hover:text-muted transition-colors">
+      Skip for now
+    </a>
+  </div>
+
+  {% endif %}
+
+</div>
+{% endblock %}
