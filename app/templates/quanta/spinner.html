@@ -1,9 +1,10 @@
-{# quanta/spinner.html — Loading spinner with optional message
-   Params:
-     message : string (default: "Loading...")
-     size    : sm | md (default: md)
-   Replaces: partials/loading.html
-#}
+{% comment %}
+  quanta/spinner.html — Loading spinner with optional message
+  Params:
+    message : string (default: "Loading...")
+    size    : sm | md (default: md)
+  Replaces: partials/loading.html
+{% endcomment %}
 
 {% with s=size|default:"md" %}
 <div class="flex items-center justify-center py-4 gap-2 text-subtle">

@@ -1,10 +1,11 @@
-{# partials/expense_form.html — Add expense form with client-side encryption
-   Context:
-     form  : AddExpenseForm (bound or unbound)
-     group : group object (.group_id)
-   Composes: photons/form-errors.html, photons/form-field.html
-   Preserves: Hyperscript encryption flow for group key
-#}
+{% comment %}
+  partials/expense_form.html — Add expense form with client-side encryption
+  Context:
+    form  : AddExpenseForm (bound or unbound)
+    group : group object (.group_id)
+  Composes: photons/form-errors.html, photons/form-field.html
+  Preserves: Hyperscript encryption flow for group key
+{% endcomment %}
 
 <form id="expense-form"
   hx-post="/api/expenses/{{ group.group_id }}/add/"

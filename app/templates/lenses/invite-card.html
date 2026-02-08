@@ -1,9 +1,10 @@
-{# lenses/invite-card.html — Group invitation card with accept action
-   Context:
-     group : group object (.group_id, .name, .member_count, .creator.subname)
-   Replaces: inline invite block in groups/list.html
-   Composes: quanta/button.html
-#}
+{% comment %}
+  lenses/invite-card.html — Group invitation card with accept action
+  Context:
+    group : group object (.group_id, .name, .member_count, .creator.subname)
+  Replaces: inline invite block in groups/list.html
+  Composes: quanta/button.html
+{% endcomment %}
 
 <div class="p-4 border border-border rounded-md bg-surface-raised"
   id="invite-{{ group.group_id }}">

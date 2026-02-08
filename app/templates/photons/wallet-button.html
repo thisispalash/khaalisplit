@@ -1,12 +1,13 @@
-{# photons/wallet-button.html — Wallet connect/disconnect toggle
-   Context:
-     user.is_authenticated — renders nothing if false
-   Extracted from: components/header.html wallet button + Hyperscript
+{% comment %}
+  photons/wallet-button.html — Wallet connect/disconnect toggle
+  Context:
+    user.is_authenticated — renders nothing if false
+  Extracted from: components/header.html wallet button + Hyperscript
 
-   Preserves exact Hyperscript behavior:
-     - on click: toggle connectWallet/disconnectWallet
-     - on walletChanged: update button text + border styling
-#}
+  Preserves exact Hyperscript behavior:
+    - on click: toggle connectWallet/disconnectWallet
+    - on walletChanged: update button text + border styling
+{% endcomment %}
 
 {% if user.is_authenticated %}
 <button

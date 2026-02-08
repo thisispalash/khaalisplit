@@ -1,14 +1,15 @@
-{# quanta/input.html — Standalone input field (not bound to Django form)
-   Params:
-     name        : string (required)
-     type        : string (default: "text")
-     placeholder : string / omit
-     label       : string / omit
-     error       : string / omit
-     helper      : string / omit
-     mono        : "true" / omit — adds font-mono class
-     extra_attrs : raw HTML for hx-*, _= etc / omit
-#}
+{% comment %}
+  quanta/input.html — Standalone input field (not bound to Django form)
+  Params:
+    name        : string (required)
+    type        : string (default: "text")
+    placeholder : string / omit
+    label       : string / omit
+    error       : string / omit
+    helper      : string / omit
+    mono        : "true" / omit — adds font-mono class
+    extra_attrs : raw HTML for hx-*, _= etc / omit
+{% endcomment %}
 
 <div class="space-y-1">
   {% if label %}

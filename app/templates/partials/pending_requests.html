@@ -1,8 +1,9 @@
-{# partials/pending_requests.html — HTMX partial for pending friend requests
-   Context:
-     pending : queryset of CachedFriend objects (.friend_user, .friend_address)
-   Uses inline markup with design tokens for accept/decline actions.
-#}
+{% comment %}
+  partials/pending_requests.html — HTMX partial for pending friend requests
+  Context:
+    pending : queryset of CachedFriend objects (.friend_user, .friend_address)
+  Uses inline markup with design tokens for accept/decline actions.
+{% endcomment %}
 
 {% if pending %}
 <div class="space-y-2">

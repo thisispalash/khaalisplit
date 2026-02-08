@@ -1,10 +1,11 @@
-{# quanta/toast.html — Toast notification (OOB swap)
-   Params:
-     message  : string (required)
-     type     : success | error | info (default: info)
-     toast_id : string (default: "auto")
-   Preserves: hx-swap-oob pattern + Hyperscript auto-dismiss from partials/toast.html
-#}
+{% comment %}
+  quanta/toast.html — Toast notification (OOB swap)
+  Params:
+    message  : string (required)
+    type     : success | error | info (default: info)
+    toast_id : string (default: "auto")
+  Preserves: hx-swap-oob pattern + Hyperscript auto-dismiss from partials/toast.html
+{% endcomment %}
 
 {% with t=type|default:"info" tid=toast_id|default:"auto" %}
 

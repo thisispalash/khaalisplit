@@ -1,12 +1,13 @@
-{# quanta/select.html — Standalone select field (not bound to Django form)
-   Params:
-     name    : string (required)
-     label   : string / omit
-     options : iterable of (value, display) tuples (required)
-     error   : string / omit
-     selected : string / omit — value to mark as selected
-     extra_attrs : raw HTML for hx-*, _= etc / omit
-#}
+{% comment %}
+  quanta/select.html — Standalone select field (not bound to Django form)
+  Params:
+    name    : string (required)
+    label   : string / omit
+    options : iterable of (value, display) tuples (required)
+    error   : string / omit
+    selected : string / omit — value to mark as selected
+    extra_attrs : raw HTML for hx-*, _= etc / omit
+{% endcomment %}
 
 <div class="space-y-1">
   {% if label %}

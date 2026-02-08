@@ -1,8 +1,9 @@
-{# lenses/group-card.html — Group list item
-   Context:
-     group : group object (.group_id, .name, .member_count, .creator.subname)
-   Replaces: groups/partials/group_card.html
-#}
+{% comment %}
+  lenses/group-card.html — Group list item
+  Context:
+    group : group object (.group_id, .name, .member_count, .creator.subname)
+  Replaces: groups/partials/group_card.html
+{% endcomment %}
 
 <div class="p-4 border border-border rounded-md hover:border-border-hover transition-colors"
   id="group-{{ group.group_id }}">

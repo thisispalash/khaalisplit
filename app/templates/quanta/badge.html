@@ -1,9 +1,10 @@
-{# quanta/badge.html — Status badge primitive
-   Params:
-     status : pending | invited | submitted | bridging | confirmed | accepted | failed | left | default
-     label  : string (required)
-     pulse  : "true" / omit — adds pulse animation
-#}
+{% comment %}
+  quanta/badge.html — Status badge primitive
+  Params:
+    status : pending | invited | submitted | bridging | confirmed | accepted | failed | left | default
+    label  : string (required)
+    pulse  : "true" / omit — adds pulse animation
+{% endcomment %}
 
 {% with s=status|default:"default" %}
 

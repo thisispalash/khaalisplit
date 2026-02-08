@@ -1,11 +1,12 @@
-{# partials/debt_summary.html — HTMX partial for simplified debt display
-   Context:
-     debts : list of enriched debt dicts (from_subname, to_subname, from_address,
-             to_address, amount, is_payer, is_payee)
-     group : group object (.group_id)
-   Composes: photons/debt-arrow.html, quanta/amount.html
-   Preserves: Hyperscript settleWithPermit flow on Pay button
-#}
+{% comment %}
+  partials/debt_summary.html — HTMX partial for simplified debt display
+  Context:
+    debts : list of enriched debt dicts (from_subname, to_subname, from_address,
+            to_address, amount, is_payer, is_payee)
+    group : group object (.group_id)
+  Composes: photons/debt-arrow.html, quanta/amount.html
+  Preserves: Hyperscript settleWithPermit flow on Pay button
+{% endcomment %}
 
 <div class="space-y-3">
   {% if debts %}

@@ -1,9 +1,10 @@
-{# partials/member_list.html — HTMX partial for group member list
-   Context:
-     members : queryset of CachedGroupMember objects (.user, .member_address, .status)
-     group   : group object
-   Composes: photons/user-pill.html, quanta/badge.html, quanta/address.html
-#}
+{% comment %}
+  partials/member_list.html — HTMX partial for group member list
+  Context:
+    members : queryset of CachedGroupMember objects (.user, .member_address, .status)
+    group   : group object
+  Composes: photons/user-pill.html, quanta/badge.html, quanta/address.html
+{% endcomment %}
 
 <div class="space-y-2" id="member-list">
   {% for member in members %}

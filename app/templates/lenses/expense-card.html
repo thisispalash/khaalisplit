@@ -1,11 +1,12 @@
-{# lenses/expense-card.html — Single expense item
-   Context:
-     expense : expense object (.expense_id, .description, .category, .creator.subname,
-               .split_type, .created_at, .amount, .encrypted_data)
-   Replaces: expenses/partials/expense_card.html
-   Composes: quanta/badge.html, quanta/amount.html
-   Preserves: Hyperscript decryption for encrypted expenses
-#}
+{% comment %}
+  lenses/expense-card.html — Single expense item
+  Context:
+    expense : expense object (.expense_id, .description, .category, .creator.subname,
+              .split_type, .created_at, .amount, .encrypted_data)
+  Replaces: expenses/partials/expense_card.html
+  Composes: quanta/badge.html, quanta/amount.html
+  Preserves: Hyperscript decryption for encrypted expenses
+{% endcomment %}
 
 <div class="flex items-center justify-between p-3 border border-border rounded-md"
   id="expense-{{ expense.expense_id }}">

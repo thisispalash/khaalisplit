@@ -1,9 +1,10 @@
-{# prisms/activity-feed.html — HTMX-loaded activity feed with spinner fallback
-   Composes: quanta/spinner.html
-   Used by: pages/home.html
-   Note: The actual activity items are loaded via HTMX from the API which
-   returns activity/partials/activity_list.html (updated to use lenses/ in Session 3)
-#}
+{% comment %}
+  prisms/activity-feed.html — HTMX-loaded activity feed with spinner fallback
+  Composes: quanta/spinner.html
+  Used by: pages/home.html
+  Note: The actual activity items are loaded via HTMX from the API which
+  returns activity/partials/activity_list.html (updated to use lenses/ in Session 3)
+{% endcomment %}
 
 <div class="space-y-6">
   <h1 class="text-2xl font-bold">Activity</h1>

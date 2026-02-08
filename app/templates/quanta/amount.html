@@ -1,9 +1,10 @@
-{# quanta/amount.html — Token amount display
-   Params:
-     value : number/string (required)
-     token : string (default: "USDC")
-     size  : sm | md (default: md)
-#}
+{% comment %}
+  quanta/amount.html — Token amount display
+  Params:
+    value : number/string (required)
+    token : string (default: "USDC")
+    size  : sm | md (default: md)
+{% endcomment %}
 
 {% with s=size|default:"md" %}
 <span class="font-mono font-medium {% if s == 'sm' %}text-xs{% else %}text-sm{% endif %}">{{ value }} {{ token|default:"USDC" }}</span>

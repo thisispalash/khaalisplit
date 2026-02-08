@@ -1,11 +1,12 @@
-{# lenses/settlement-card.html — Settlement status with HTMX polling
-   Context:
-     settlement : settlement object (.tx_hash, .status, .from_user, .to_user,
-                  .from_address, .to_address, .amount, .token, .created_at)
-   Replaces: settlement/partials/settlement_status.html
-   Composes: quanta/badge.html, quanta/address.html, quanta/amount.html
-   Preserves: HTMX polling for pending/bridging settlements
-#}
+{% comment %}
+  lenses/settlement-card.html — Settlement status with HTMX polling
+  Context:
+    settlement : settlement object (.tx_hash, .status, .from_user, .to_user,
+                 .from_address, .to_address, .amount, .token, .created_at)
+  Replaces: settlement/partials/settlement_status.html
+  Composes: quanta/badge.html, quanta/address.html, quanta/amount.html
+  Preserves: HTMX polling for pending/bridging settlements
+{% endcomment %}
 
 <div class="p-3 border border-border rounded-md"
   id="settlement-{{ settlement.tx_hash }}"

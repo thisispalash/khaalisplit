@@ -1,10 +1,11 @@
-{# photons/form-field.html — Bound Django form field wrapper
-   Context:
-     field  : bound form field (required) — e.g. form.display_name
-     label  : string / omit (falls back to field.label)
-     helper : string / omit
-   Replaces: 12 instances of the label+field+error inline pattern
-#}
+{% comment %}
+  photons/form-field.html — Bound Django form field wrapper
+  Context:
+    field  : bound form field (required) — e.g. form.display_name
+    label  : string / omit (falls back to field.label)
+    helper : string / omit
+  Replaces: 12 instances of the label+field+error inline pattern
+{% endcomment %}
 
 <div class="space-y-1">
   {% if label or field.label %}

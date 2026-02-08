@@ -1,8 +1,9 @@
-{# photons/form-errors.html — Non-field form errors block
-   Context:
-     errors : form.non_field_errors (required)
-   Replaces: 4 inline error blocks across auth/group templates
-#}
+{% comment %}
+  photons/form-errors.html — Non-field form errors block
+  Context:
+    errors : form.non_field_errors (required)
+  Replaces: 4 inline error blocks across auth/group templates
+{% endcomment %}
 
 {% if errors %}
 <div class="bg-accent-muted text-foreground text-sm border border-foreground px-3 py-2 rounded-md space-y-1">
