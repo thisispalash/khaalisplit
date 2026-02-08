@@ -22,6 +22,7 @@ services:
     volumes:
       - .:/app
       - khaalisplit_static:/app/static
+      - /usr/local/bin/tailwindcss:/usr/local/bin/tailwindcss:ro
     ports:
       - "8002:8000"
     networks:
@@ -41,6 +42,7 @@ services:
       - .env
     volumes:
       - khaalisplit_static:/app/staticfiles
+      - /usr/local/bin/tailwindcss:/usr/local/bin/tailwindcss:ro
     networks:
       - kdio_network
     profiles:
