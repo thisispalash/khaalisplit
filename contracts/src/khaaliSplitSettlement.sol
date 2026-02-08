@@ -8,6 +8,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ITokenMessengerV2} from "./interfaces/ITokenMessengerV2.sol";
 import {IGatewayWallet} from "./interfaces/IGatewayWallet.sol";
+import {IGatewayMinter} from "./interfaces/IGatewayMinter.sol";
 import {IERC20Receive} from "./interfaces/IERC20Receive.sol";
 import {IkhaaliSplitSubnames} from "./interfaces/IkhaaliSplitSubnames.sol";
 import {IkhaaliSplitReputation} from "./interfaces/IkhaaliSplitReputation.sol";
@@ -67,6 +68,9 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     /// @notice Circle Gateway Wallet address for Gateway deposits.
     IGatewayWallet public gatewayWallet;
 
+    /// @notice Circle Gateway Minter address for minting USDC from attestations.
+    IGatewayMinter public gatewayMinter;
+
     /// @notice Subname registry for reading payment preferences from ENS text records.
     IkhaaliSplitSubnames public subnameRegistry;
 
@@ -90,6 +94,7 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     event TokenRemoved(address indexed token);
     event TokenMessengerUpdated(address indexed newTokenMessenger);
     event GatewayWalletUpdated(address indexed newGatewayWallet);
+    event GatewayMinterUpdated(address indexed newGatewayMinter);
     event DomainConfigured(uint256 indexed chainId, uint32 domain);
     event SubnameRegistryUpdated(address indexed newSubnameRegistry);
     event ReputationContractUpdated(address indexed newReputationContract);
@@ -105,6 +110,7 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     error RecipientNotRegistered(bytes32 node);
     error SubnameRegistryNotSet();
     error GatewayWalletNotSet();
+    error GatewayMinterNotSet();
     error TokenMessengerNotSet();
     error CctpDomainNotInTextRecord();
 
@@ -221,6 +227,70 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     }
 
     // ──────────────────────────────────────────────
+    //  Settlement — Gateway Mint
+    // ──────────────────────────────────────────────
+
+    /**
+     * @notice Settlement function for Gateway-minted USDC.
+     *
+     * @dev Flow:
+     *      1. Validates inputs (recipientNode, subname registry, gateway minter).
+     *      2. Resolves token from recipient's text records, records balance before.
+     *      3. Calls gatewayMinter.gatewayMint() — USDC minted to this contract.
+     *      4. Computes actual minted amount via balance diff (handles Gateway fees).
+     *      5. Resolves recipient address from ENS node.
+     *      6. Routes settlement (Gateway or CCTP, same as settleWithAuthorization).
+     *      7. Updates sender reputation.
+     *      8. Emits SettlementCompleted.
+     *
+     *      The sender signs a BurnIntent off-chain. The backend submits it to
+     *      Circle's Gateway API to get attestation + signature, then calls this
+     *      function. Anyone can submit (no access control).
+     *
+     * @param attestationPayload  The attestation payload from Circle's Gateway API.
+     * @param attestationSignature The attestation signature from Circle's Gateway API.
+     * @param recipientNode       The ENS namehash of the recipient's subname.
+     * @param sender              The sender's address (for reputation tracking).
+     * @param memo                Arbitrary data (e.g. encrypted memo for off-chain indexing).
+     */
+    function settleFromGateway(
+        bytes calldata attestationPayload,
+        bytes calldata attestationSignature,
+        bytes32 recipientNode,
+        address sender,
+        bytes calldata memo
+    ) external {
+        if (recipientNode == bytes32(0)) revert ZeroAddress();
+        if (address(subnameRegistry) == address(0)) revert SubnameRegistryNotSet();
+        if (address(gatewayMinter) == address(0)) revert GatewayMinterNotSet();
+
+        // Resolve token and record balance before mint
+        address token = _resolveToken(recipientNode);
+        if (!allowedTokens[token]) revert TokenNotAllowed(token);
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+
+        // Mint USDC to this contract via Gateway attestation
+        gatewayMinter.gatewayMint(attestationPayload, attestationSignature);
+
+        // Calculate actual minted amount (after Gateway fees)
+        uint256 balanceAfter = IERC20(token).balanceOf(address(this));
+        uint256 amount = balanceAfter - balanceBefore;
+        if (amount == 0) revert ZeroAmount();
+
+        // Resolve recipient address from ENS node
+        address recipient = subnameRegistry.addr(recipientNode);
+        if (recipient == address(0)) revert RecipientNotRegistered(recipientNode);
+
+        // Route settlement (same logic as settleWithAuthorization)
+        _routeSettlement(recipientNode, recipient, token, amount);
+
+        // Update sender reputation
+        uint256 senderReputation = _updateReputation(sender);
+
+        emit SettlementCompleted(sender, recipient, token, amount, senderReputation, memo);
+    }
+
+    // ──────────────────────────────────────────────
     //  Token Management (owner only)
     // ──────────────────────────────────────────────
 
@@ -268,6 +338,13 @@ contract khaaliSplitSettlement is Initializable, UUPSUpgradeable, OwnableUpgrade
     function setGatewayWallet(address _gatewayWallet) external onlyOwner {
         gatewayWallet = IGatewayWallet(_gatewayWallet);
         emit GatewayWalletUpdated(_gatewayWallet);
+    }
+
+    /// @notice Set the Circle Gateway Minter address.
+    /// @dev address(0) is allowed (disables Gateway mint settlements).
+    function setGatewayMinter(address _gatewayMinter) external onlyOwner {
+        gatewayMinter = IGatewayMinter(_gatewayMinter);
+        emit GatewayMinterUpdated(_gatewayMinter);
     }
 
     /// @notice Set the subname registry for reading payment preferences.
