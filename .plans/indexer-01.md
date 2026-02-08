@@ -1093,3 +1093,58 @@ Common issues to watch for:
 - Django app integration (covered in `application-03.md`)
 - Hasura metadata/permissions configuration
 - Production monitoring/alerting
+
+---
+
+## Implementation Notes (Session 1)
+
+### Envio version
+- Plan specified `envio@^2.26.0`, installed `envio@2.32.3`. No breaking changes.
+
+### Critical: `optionalDependencies` for `generated` module
+- The plan's `package.json` was missing `"optionalDependencies": { "generated": "./generated" }`.
+- Without this, `import { USDC } from "generated"` fails at runtime with `Cannot find module 'generated'`.
+- The `generated/` directory has `"name": "generated"` in its `package.json` — pnpm links it into `node_modules/generated` via the optional dep.
+- Found by checking Envio's own [local-docker-example](https://github.com/enviodev/local-docker-example/blob/main/package.json).
+
+### Critical: `field_selection` required for `event.transaction.hash`
+- In Envio v2.11+, `Transaction_t` is **empty by default** (`{}`). Fields must be opted into via `field_selection` in `config.yaml`.
+- `Block_t` always has `number`, `timestamp`, `hash` — no opt-in needed.
+- Added to config.yaml:
+  ```yaml
+  field_selection:
+    transaction_fields:
+      - hash
+  ```
+- This applies globally. Session 2 config must also include this.
+
+### Database name is lowercase
+- The plan references `khaaliSplit_db` but the actual database on the shared Postgres is `khaalisplit_db` (all lowercase).
+- Updated `.env` and `.env.example` to use `khaalisplit_db`.
+
+### Hasura table tracking warning (expected)
+- On startup, Envio tries to track tables (`USDCTransfer`, `raw_events`, `_meta`, `chain_metadata`) in Hasura.
+- This fails with `"invalid-configuration"` because the shared Hasura's default source doesn't point at the `envio` schema in `khaalisplit_db`.
+- The indexer logs this as a WARNING and continues — **indexing works fine**, but GraphQL queries via Hasura won't work until the Hasura source is configured to use the `envio` schema.
+- This is out of scope for the indexer (covered in VPS orchestration / Hasura metadata config).
+
+### Docker dev mode with bind mount
+- The Dockerfile runs `pnpm envio codegen` during build, so the baked image has `generated/` correctly.
+- Dev mode bind-mounts `.:/app` and uses an anonymous volume for `/app/node_modules`.
+- The bind mount means the host's `generated/` (from local codegen) is used, which works because the symlink in `node_modules/generated` → `../generated` resolves correctly.
+
+### USDC test start_block
+- Used `10217500` (~100 blocks behind Sepolia head at time of implementation).
+- Indexed **656 Transfer events** within the first ~450 blocks as validation.
+
+### Session 1 Verification Results
+
+| Check | Result |
+|---|---|
+| ABIs are valid JSON arrays | ✅ All 9 ABIs valid |
+| codegen succeeds | ✅ 124/124 ReScript files compiled |
+| Docker config valid | ✅ `docker compose --profile dev config` |
+| Docker builds | ✅ Image built with codegen inside container |
+| Indexer starts and syncs | ✅ HyperSync connected, blocks processed |
+| Data in Postgres | ✅ 656+ `USDCTransfer` rows in `envio."USDCTransfer"` |
+| Hasura shows data | ⚠️ Hasura source not configured for `envio` schema (expected, out of scope) |
