@@ -341,6 +341,34 @@ The client can differentiate with a `type` field in the NFC/Bluetooth payload:
 
 ---
 
+## Implementation Notes (2026-02-07)
+
+### Change 2: `bytes32 recipientNode` Refactor — COMPLETED
+
+**Commit:** `e0608fa`
+
+**What was done:**
+- Removed `addressToNode` mapping from `khaaliSplitSubnames.sol` (storage + register assignment)
+- Removed `addressToNode` from `IkhaaliSplitSubnames.sol` interface
+- Updated `settle()` stub: `address` → `bytes32` first param
+- Updated `settleWithAuthorization()`: `address recipient` → `bytes32 recipientNode`, now resolves wallet address via `subnameRegistry.addr(recipientNode)`
+- Updated `RecipientNotRegistered` error: `address` → `bytes32 node`
+- Updated `IkhaaliSplitSettlement.sol` to match new signatures
+- Updated all 52 settlement tests to pass `BOB_NODE` / `CHARLIE_NODE` instead of `bob` / `charlie`
+- Updated `MockSubnamesForSettlement`: removed `addressToNode` mapping, `_registerRecipient` now uses `setAddr(node, recipient)` instead of `setAddressToNode(recipient, node)`
+- Updated README: `addressToNode()` → `addr(node)` in subnames description
+- No `addressToNode` tests existed in subnames test file (nothing to remove)
+
+**Deviations from plan:** None. The refactor was straightforward.
+
+**Test results:** 250 passing, 0 failed, 1 skipped (old integration test). All 52 settlement tests updated and green.
+
+### Change 1: `settleFromGateway` — NOT YET STARTED
+
+Deferred to next session. The plan above describes the full design.
+
+---
+
 ## Open Questions
 
 1. **Attestation sender extraction**: Do we pass `sender` explicitly (Option B, recommended for hackathon) or extract from attestation bytes (Option A, production-grade)? Plan assumes Option B.
