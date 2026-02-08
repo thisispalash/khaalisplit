@@ -2,7 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import render
 
-from api.forms.auth import ProfileForm
+from api.forms.auth import ProfileForm, SignupForm
 from api.forms.groups import CreateGroupForm
 from api.models import CachedGroup, CachedGroupMember, User
 
@@ -11,7 +11,7 @@ def home(request):
   """Home page — activity feed for logged-in users, signup for anonymous."""
   if request.user.is_authenticated:
     return render(request, 'pages/home.html')
-  return render(request, 'pages/signup.html')
+  return render(request, 'pages/signup.html', {'form': SignupForm()})
 
 
 @login_required(login_url='/api/auth/login/')
