@@ -7,6 +7,7 @@ import {khaaliSplitSettlement} from "../src/khaaliSplitSettlement.sol";
 import {MockUSDC} from "./helpers/MockUSDC.sol";
 import {MockTokenMessengerV2} from "./helpers/MockTokenMessengerV2.sol";
 import {MockGatewayWallet} from "./helpers/MockGatewayWallet.sol";
+import {MockGatewayMinter} from "./helpers/MockGatewayMinter.sol";
 
 /**
  * @title MockSubnamesForSettlement
@@ -89,6 +90,7 @@ contract khaaliSplitSettlementTest is Test {
     MockUSDC public usdc;
     MockTokenMessengerV2 public tokenMessenger;
     MockGatewayWallet public gatewayWallet;
+    MockGatewayMinter public gatewayMinter;
     MockSubnamesForSettlement public subnameRegistry;
     MockReputationForSettlement public reputation;
 
@@ -113,6 +115,7 @@ contract khaaliSplitSettlementTest is Test {
         gatewayWallet = new MockGatewayWallet();
         subnameRegistry = new MockSubnamesForSettlement();
         reputation = new MockReputationForSettlement();
+        gatewayMinter = new MockGatewayMinter(address(usdc), SETTLE_AMOUNT);
 
         khaaliSplitSettlement impl = new khaaliSplitSettlement();
         ERC1967Proxy proxy = new ERC1967Proxy(
@@ -124,6 +127,7 @@ contract khaaliSplitSettlementTest is Test {
         vm.startPrank(owner);
         settlement.addToken(address(usdc));
         settlement.setGatewayWallet(address(gatewayWallet));
+        settlement.setGatewayMinter(address(gatewayMinter));
         settlement.setTokenMessenger(address(tokenMessenger));
         settlement.setSubnameRegistry(address(subnameRegistry));
         settlement.setReputationContract(address(reputation));
@@ -214,6 +218,7 @@ contract khaaliSplitSettlementTest is Test {
     function test_initialize_state() public view {
         assertTrue(settlement.allowedTokens(address(usdc)));
         assertEq(address(settlement.gatewayWallet()), address(gatewayWallet));
+        assertEq(address(settlement.gatewayMinter()), address(gatewayMinter));
         assertEq(address(settlement.tokenMessenger()), address(tokenMessenger));
         assertEq(address(settlement.subnameRegistry()), address(subnameRegistry));
         assertEq(address(settlement.reputationContract()), address(reputation));
@@ -576,6 +581,27 @@ contract khaaliSplitSettlementTest is Test {
         settlement.setGatewayWallet(makeAddr("gw"));
     }
 
+    function test_setGatewayMinter_success() public {
+        address newGm = makeAddr("newGM");
+        vm.prank(owner);
+        vm.expectEmit(true, false, false, false);
+        emit khaaliSplitSettlement.GatewayMinterUpdated(newGm);
+        settlement.setGatewayMinter(newGm);
+        assertEq(address(settlement.gatewayMinter()), newGm);
+    }
+
+    function test_setGatewayMinter_allowsZero() public {
+        vm.prank(owner);
+        settlement.setGatewayMinter(address(0));
+        assertEq(address(settlement.gatewayMinter()), address(0));
+    }
+
+    function test_setGatewayMinter_revertsNotOwner() public {
+        vm.prank(alice);
+        vm.expectRevert();
+        settlement.setGatewayMinter(makeAddr("gm"));
+    }
+
     function test_setSubnameRegistry_success() public {
         address newSr = makeAddr("newSR");
         vm.prank(owner);
@@ -610,6 +636,159 @@ contract khaaliSplitSettlementTest is Test {
         vm.prank(alice);
         vm.expectRevert();
         settlement.setReputationContract(makeAddr("rep"));
+    }
+
+    // ══════════════════════════════════════════════
+    //  SETTLE FROM GATEWAY
+    // ══════════════════════════════════════════════
+
+    function test_gatewayMint_success() public {
+        vm.prank(relayer);
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+
+        // Verify gateway minter was called
+        assertEq(gatewayMinter.callCount(), 1);
+
+        // Verify funds routed to gateway wallet (bob has gateway flow)
+        assertEq(gatewayWallet.callCount(), 1);
+        MockGatewayWallet.DepositForCall memory call = gatewayWallet.getCall(0);
+        assertEq(call.token, address(usdc));
+        assertEq(call.depositor, bob);
+        assertEq(call.value, SETTLE_AMOUNT);
+
+        // Settlement contract should have 0 balance
+        assertEq(usdc.balanceOf(address(settlement)), 0);
+    }
+
+    function test_gatewayMint_routesViaCCTP() public {
+        _registerRecipient(charlie, CHARLIE_NODE, _addressToHexString(address(usdc)), "84532", "cctp", "6");
+        gatewayMinter.setMintAmount(SETTLE_AMOUNT);
+
+        vm.prank(relayer);
+        settlement.settleFromGateway("payload", "sig", CHARLIE_NODE, alice, "");
+
+        assertEq(tokenMessenger.callCount(), 1);
+        MockTokenMessengerV2.DepositForBurnCall memory call = tokenMessenger.getCall(0);
+        assertEq(call.amount, SETTLE_AMOUNT);
+        assertEq(call.destinationDomain, 6);
+        assertEq(call.mintRecipient, bytes32(uint256(uint160(charlie))));
+        assertEq(call.burnToken, address(usdc));
+    }
+
+    function test_gatewayMint_emitsEvent() public {
+        vm.prank(relayer);
+        vm.expectEmit(true, true, false, true);
+        emit khaaliSplitSettlement.SettlementCompleted(alice, bob, address(usdc), SETTLE_AMOUNT, 51, "");
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+    }
+
+    function test_gatewayMint_updatesReputation() public {
+        vm.prank(relayer);
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+
+        assertEq(reputation.recordCallCount(), 1);
+        assertEq(reputation.getReputation(alice), 51);
+    }
+
+    function test_gatewayMint_reputationNotSet_emits500() public {
+        vm.prank(owner);
+        settlement.setReputationContract(address(0));
+
+        vm.prank(relayer);
+        vm.expectEmit(true, true, false, true);
+        emit khaaliSplitSettlement.SettlementCompleted(alice, bob, address(usdc), SETTLE_AMOUNT, 500, "");
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+    }
+
+    function test_gatewayMint_revertsIfMinterNotSet() public {
+        vm.prank(owner);
+        settlement.setGatewayMinter(address(0));
+
+        vm.prank(relayer);
+        vm.expectRevert(khaaliSplitSettlement.GatewayMinterNotSet.selector);
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+    }
+
+    function test_gatewayMint_revertsIfMintFails() public {
+        gatewayMinter.setShouldRevert(true);
+
+        vm.prank(relayer);
+        vm.expectRevert("MockGatewayMinter: reverted");
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+    }
+
+    function test_gatewayMint_revertsIfZeroMinted() public {
+        gatewayMinter.setShouldMintZero(true);
+
+        vm.prank(relayer);
+        vm.expectRevert(khaaliSplitSettlement.ZeroAmount.selector);
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+    }
+
+    function test_gatewayMint_revertsIfTokenNotAllowed() public {
+        address fakeToken = makeAddr("fakeToken");
+        subnameRegistry.setTextRecord(BOB_NODE, "com.khaalisplit.payment.token", _addressToHexString(fakeToken));
+
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(khaaliSplitSettlement.TokenNotAllowed.selector, fakeToken));
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+    }
+
+    function test_gatewayMint_revertsIfRecipientNotRegistered() public {
+        bytes32 unregisteredNode = keccak256("unregistered.khaalisplit.eth");
+        // Set a valid token text record so we get past the token check
+        subnameRegistry.setTextRecord(unregisteredNode, "com.khaalisplit.payment.token", _addressToHexString(address(usdc)));
+
+        vm.prank(relayer);
+        vm.expectRevert(abi.encodeWithSelector(khaaliSplitSettlement.RecipientNotRegistered.selector, unregisteredNode));
+        settlement.settleFromGateway("payload", "sig", unregisteredNode, alice, "");
+    }
+
+    function test_gatewayMint_revertsIfZeroRecipientNode() public {
+        vm.prank(relayer);
+        vm.expectRevert(khaaliSplitSettlement.ZeroAddress.selector);
+        settlement.settleFromGateway("payload", "sig", bytes32(0), alice, "");
+    }
+
+    function test_gatewayMint_revertsIfSubnameRegistryNotSet() public {
+        khaaliSplitSettlement impl = new khaaliSplitSettlement();
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), abi.encodeCall(khaaliSplitSettlement.initialize, (owner)));
+        khaaliSplitSettlement fresh = khaaliSplitSettlement(address(proxy));
+
+        vm.prank(relayer);
+        vm.expectRevert(khaaliSplitSettlement.SubnameRegistryNotSet.selector);
+        fresh.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+    }
+
+    function test_gatewayMint_withMemo() public {
+        bytes memory memo = abi.encodePacked("gateway dinner split");
+        vm.prank(relayer);
+        vm.expectEmit(true, true, false, true);
+        emit khaaliSplitSettlement.SettlementCompleted(alice, bob, address(usdc), SETTLE_AMOUNT, 51, memo);
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, memo);
+    }
+
+    function test_gatewayMint_anyoneCanCall() public {
+        address randomCaller = makeAddr("randomCaller");
+        vm.prank(randomCaller);
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+
+        assertEq(gatewayMinter.callCount(), 1);
+        assertEq(gatewayWallet.callCount(), 1);
+    }
+
+    function test_gatewayMint_handlesPartialMint() public {
+        // Simulate Gateway taking fees — only 95 USDC minted instead of 100
+        uint256 partialAmount = 95e6;
+        gatewayMinter.setMintAmount(partialAmount);
+
+        vm.prank(relayer);
+        vm.expectEmit(true, true, false, true);
+        emit khaaliSplitSettlement.SettlementCompleted(alice, bob, address(usdc), partialAmount, 51, "");
+        settlement.settleFromGateway("payload", "sig", BOB_NODE, alice, "");
+
+        MockGatewayWallet.DepositForCall memory call = gatewayWallet.getCall(0);
+        assertEq(call.value, partialAmount);
     }
 
     // ══════════════════════════════════════════════
