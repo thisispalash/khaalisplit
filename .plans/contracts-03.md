@@ -1,0 +1,625 @@
+# khaaliSplit: Settlement + Subnames + Reputation Implementation Plan
+
+## Overview
+
+Three major contract changes:
+1. **Settlement** — Remove relayer, integrate CCTP V2 directly, add Gateway opt-in
+2. **Subnames** — New on-chain ENS subname registrar with ERC-1155 + on-chain text records (replaces CCIP-Read resolver)
+3. **Reputation** — New on-chain reputation contract, syncs to ENS text records automatically
+
+All contracts: Solidity ^0.8.22, UUPS upgradeable, deployed via `kdioDeployer` CREATE2.
+
+Base path: `/Users/thisispalash/local/___2026-final/hacks/hackmoney2026/src/contracts/contracts/`
+
+### Approved Chains & Token Policy
+
+**Only approved token: USDC** (EURC and other tokens removed from config).
+
+**Approved chains only:**
+
+| Chain | Chain ID | USDC Address | CCTP Domain |
+|-------|----------|-------------|-------------|
+| Sepolia | 11155111 | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | 0 |
+| Base Sepolia | 84532 | `0x036CbD53842c5426634e7929541eC2318f3dCF7e` | 6 |
+| Arc Testnet | 1397 | `0x3600000000000000000000000000000000000000` | N/A (no CCTP) |
+| Ethereum Mainnet | 1 | `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` | 0 |
+| Base Mainnet | 8453 | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | 6 |
+
+**CCTP TokenMessengerV2 addresses:**
+- Testnet: `0x8fe6b999dc680ccfdd5bf7eb0974218be2542daa`
+- Mainnet: `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d`
+
+**Circle Gateway Wallet addresses:**
+- Testnet: `0x0077777d7EBA4688BDeF3E311b846F25870A19B9`
+- Mainnet: TBD (uses `0x7777777` prefix — verify on Etherscan before mainnet deploy)
+
+**`script/tokens.json` must be rewritten** to reflect this (USDC only, approved chains only).
+
+---
+
+## Implementation Order
+
+```
+1. Interfaces (all 5 new interface files)
+2. khaaliSplitSettlement.sol (rewrite — standalone, depends only on CCTP interface)
+3. khaaliSplitSubnames.sol (new — depends on NameWrapper interface)
+4. khaaliSplitReputation.sol (new — depends on IkhaaliSplitSubnames)
+5. Mock helpers for tests
+6. Tests for all 3 contracts
+7. Deployment scripts
+8. Deprecation note on old resolver
+```
+
+---
+
+## Change 1: Settlement — Direct CCTP + Gateway
+
+### Files
+
+| Action | File |
+|--------|------|
+| CREATE | `src/interfaces/IkhaaliSplitSettlement.sol` |
+| CREATE | `src/interfaces/ITokenMessengerV2.sol` |
+| REWRITE | `src/khaaliSplitSettlement.sol` |
+| REWRITE | `test/khaaliSplitSettlement.t.sol` |
+| CREATE | `test/helpers/MockTokenMessengerV2.sol` |
+| CREATE | `script/cctp.json` |
+| REWRITE | `script/tokens.json` (USDC only, approved chains only) |
+| MODIFY | `script/DeploySettlement.s.sol` |
+
+### `ITokenMessengerV2.sol` — Minimal CCTP interface
+
+```solidity
+interface ITokenMessengerV2 {
+    function depositForBurn(
+        uint256 amount,
+        uint32 destinationDomain,
+        bytes32 mintRecipient,
+        address burnToken
+    ) external returns (uint64 nonce);
+}
+```
+
+### `khaaliSplitSettlement.sol` — Storage
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `allowedTokens` | `mapping(address => bool)` | Preserved |
+| `tokenMessenger` | `ITokenMessengerV2` | CCTP TokenMessengerV2 address |
+| `chainIdToDomain` | `mapping(uint256 => uint32)` | EVM chain ID → CCTP domain |
+| `domainConfigured` | `mapping(uint256 => bool)` | Whether domain is set |
+| `gatewayWallet` | `address` | Circle Gateway wallet (optional) |
+
+### Key Design
+
+- **`initialize(address _owner)`** — Signature UNCHANGED (preserves CREATE2 determinism with empty init data). CCTP config via post-init setters.
+- **`settle()`** — Pulls tokens, then:
+  - Same chain (`destChainId == block.chainid`): direct `safeTransfer` to recipient
+  - Cross chain: `forceApprove(tokenMessenger, amount)` → `depositForBurn(amount, domain, bytes32(recipient), token)`
+- **`settleWithPermit()`** — EIP-2612 permit, then same logic as settle
+- **`settleViaGateway(token, amount, note)`** — Separate function. Transfers tokens to `gatewayWallet`. Backend handles BurnIntent off-chain.
+- **`settleViaGatewayWithPermit(...)`** — Gasless variant
+- **`withdraw()` REMOVED** — No more relayer custody
+- **Internal `_executeSettlement()`** — Shared logic for settle + settleWithPermit
+- **Internal `_executeGatewaySettlement()`** — Shared logic for gateway variants
+
+### Events
+
+- `SettlementInitiated` (preserved, still emitted for indexing)
+- `SameChainSettlement(sender, recipient, token, amount)`
+- `GatewaySettlement(sender, recipient, token, amount)`
+- `DomainConfigured(chainId, domain)`
+- `TokenMessengerUpdated(tokenMessenger)`
+- `GatewayWalletUpdated(gatewayWallet)`
+
+### Admin Functions (owner only)
+
+- `addToken()` / `removeToken()` (preserved)
+- `setTokenMessenger(address)`
+- `configureDomain(uint256 chainId, uint32 domain)`
+- `setGatewayWallet(address)`
+
+### CCTP Config (`script/cctp.json`)
+
+```json
+{
+  "testnet": {
+    "tokenMessenger": "0x8fe6b999dc680ccfdd5bf7eb0974218be2542daa",
+    "gatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "domains": {
+      "11155111": 0,
+      "84532": 6
+    }
+  },
+  "mainnet": {
+    "tokenMessenger": "0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d",
+    "gatewayWallet": "0x0000000000000000000000000000000000000000",
+    "domains": {
+      "1": 0,
+      "8453": 6
+    }
+  }
+}
+```
+
+Note: Arc Testnet (chain ID 1397) does NOT support CCTP — settlements to/from Arc use Gateway or same-chain transfer only.
+
+### Updated `script/tokens.json` (USDC only, approved chains only)
+
+```json
+{
+  "11155111": {
+    "name": "sepolia",
+    "tokens": {
+      "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+    }
+  },
+  "84532": {
+    "name": "baseSepolia",
+    "tokens": {
+      "USDC": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+    }
+  },
+  "1397": {
+    "name": "arc_testnet",
+    "tokens": {
+      "USDC": "0x3600000000000000000000000000000000000000"
+    }
+  },
+  "1": {
+    "name": "ethereum",
+    "tokens": {
+      "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    }
+  },
+  "8453": {
+    "name": "base",
+    "tokens": {
+      "USDC": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    }
+  }
+}
+```
+
+Removed: Arbitrum Sepolia, Avalanche Fuji, Optimism Sepolia, and all EURC entries.
+
+Note: The `DeploySettlement.s.sol` script currently reads EURC keys from tokens.json. The EURC parsing logic should be removed; only USDC should be read and added via `addToken()`.
+
+### DeploySettlement.s.sol Changes
+
+After `proxy.initialize(ownerAddress)` and `addToken()` calls, add:
+- Read `script/cctp.json` for TokenMessenger address and domain mappings
+- Call `proxy.setTokenMessenger(tokenMessengerAddress)`
+- Loop through domain config: `proxy.configureDomain(chainId, domain)` for each pair
+- Optionally: `proxy.setGatewayWallet(gatewayWalletAddress)`
+
+### Implementation Notes (2026-02-07)
+
+**Branch:** `contracts-settlement` (off `contracts`)
+**Worktree:** `src/contracts-settlement/`
+
+#### Plan Changes
+
+The following changes were made to the original plan during pre-implementation discussion:
+
+**1. `settle()` is a stub — `settleWithAuthorization()` is the primary function.**
+- `settle(address recipient, uint256 amount, bytes calldata memo)` reverts with `NotImplemented()`. Kept as a placeholder for future approval-based flow.
+- `settleWithAuthorization(address recipient, uint256 amount, bytes calldata memo, uint256 validAfter, uint256 validBefore, bytes32 nonce, bytes calldata signature)` is the primary entry point.
+- Uses EIP-3009 `receiveWithAuthorization` (not EIP-2612 permit). USDC natively supports this. The user signs a message authorizing the settlement contract to receive USDC, and the signature can be submitted by anyone (relayer, peer via Bluetooth, etc.). No prior approval transaction needed.
+- Rationale: Enables offline payments — user signs once, signature is transmitted out-of-band (Bluetooth, QR, etc.), and any party can submit it on-chain.
+
+**2. No `bytes32` in public API — addresses only.**
+- All public functions use `address recipient` instead of `bytes32 recipientNode`.
+- Node lookup is internal: the contract calls `subnameRegistry.addressToNode(recipient)` to get the ENS node, then reads payment preferences from text records.
+- Requires a new `addressToNode` mapping on the subnames contract (set automatically during `register()`).
+
+**3. Gateway is the default flow, CCTP is opt-in.**
+- The `com.khaalisplit.payment.flow` text record defaults to `"gateway"`.
+- Gateway routing: settlement contract pulls USDC → `forceApprove(gatewayWallet, amount)` → `gatewayWallet.depositFor(token, recipient, amount)`. Recipient gets a unified Gateway USDC balance.
+- CCTP routing (opt-in): user explicitly sets `payment.flow = "cctp"` and `payment.cctp = "<domain>"`. The contract calls `tokenMessenger.depositForBurn()`.
+- New minimal interface: `IGatewayWallet` with `depositFor(address token, address depositor, uint256 value)`.
+
+**4. No same-chain direct transfer in the contract.**
+- Same-chain transfers are handled by the client (direct USDC transfer, no intermediary). The settlement contract always routes through Gateway or CCTP.
+- If `payment.flow` is empty/default → Gateway. If `payment.flow == "cctp"` → CCTP.
+
+**5. Payment preferences read from ENS text records.**
+- `com.khaalisplit.payment.chain` — destination chain ID (uint as string, e.g. "8453")
+- `com.khaalisplit.payment.token` — token contract address on destination chain (e.g. USDC address on Base)
+- `com.khaalisplit.payment.flow` — `"gateway"` (default) or `"cctp"` (opt-in)
+- `com.khaalisplit.payment.cctp` — CCTP domain code (required if flow == "cctp", reverts if missing)
+- Follows ENSIP-5 service key convention (`com.khaalisplit.*` reverse domain notation).
+- Defaults if text records are empty: USDC on current chain, gateway flow.
+
+**6. Single event replaces all previous events.**
+- `SettlementCompleted(address indexed sender, address indexed recipient, address token, uint256 amount, uint256 senderReputation, bytes memo)` replaces `SettlementInitiated`, `SameChainSettlement`, `GatewaySettlement`.
+- `senderReputation` = 500 sentinel value if reputation contract is `address(0)`.
+- No `destChainId` in the event (removed per discussion).
+
+**7. Reputation integration.**
+- `reputationContract` storage field + `setReputationContract()` admin setter (same pattern as subnames).
+- After every successful settlement, calls `reputationContract.recordSettlement(sender, true)`.
+- Silently skips if `reputationContract == address(0)` (emits 500 sentinel in event).
+
+**8. `settleWithPermit()`, `settleViaGateway()`, `settleViaGatewayWithPermit()` all removed.**
+- Replaced by unified `settleWithAuthorization()` which reads the recipient's preferred flow from ENS text records and routes accordingly.
+
+**9. `withdraw()` removed** as planned (no relayer custody).
+
+**10. `note` parameter renamed to `memo`** — `bytes calldata memo` on both `settle` and `settleWithAuthorization`.
+
+**11. EIP-3009 interface uses `bytes` signature format.**
+- Matches USDC FiatTokenV2_2 which uses `bytes memory signature` (packed r,s,v) instead of separate v,r,s params.
+
+**12. Subnames contract change required.**
+- Add `mapping(address => bytes32) public addressToNode` to `khaaliSplitSubnames.sol`.
+- Set automatically in `register()`: `addressToNode[owner] = node`.
+- Add `addressToNode(address)` to `IkhaaliSplitSubnames.sol` interface.
+
+#### Files (Updated)
+
+| Action | File |
+|--------|------|
+| CREATE | `src/interfaces/IkhaaliSplitSettlement.sol` |
+| CREATE | `src/interfaces/ITokenMessengerV2.sol` |
+| CREATE | `src/interfaces/IGatewayWallet.sol` |
+| CREATE | `src/interfaces/IERC20Receive.sol` |
+| REWRITE | `src/khaaliSplitSettlement.sol` |
+| MODIFY | `src/khaaliSplitSubnames.sol` (add `addressToNode` mapping) |
+| MODIFY | `src/interfaces/IkhaaliSplitSubnames.sol` (add `addressToNode` to interface) |
+| REWRITE | `test/khaaliSplitSettlement.t.sol` |
+| CREATE | `test/helpers/MockTokenMessengerV2.sol` |
+| CREATE | `test/helpers/MockGatewayWallet.sol` |
+| MODIFY | `test/helpers/MockUSDC.sol` (add `receiveWithAuthorization` support) |
+| CREATE | `script/cctp.json` |
+| REWRITE | `script/tokens.json` |
+| MODIFY | `script/DeploySettlement.s.sol` |
+
+#### Test Coverage (target)
+
+- Initialization: state, reinit revert, zero-address reverts
+- settle(): reverts with NotImplemented
+- settleWithAuthorization — Gateway flow: success, events, reputation update, memo in event
+- settleWithAuthorization — CCTP flow: success with configured domain, reverts if cctp domain not in text records, reverts if domain not configured on contract
+- settleWithAuthorization — defaults: empty text records fall back to gateway
+- settleWithAuthorization — validation: zero amount, zero recipient, token not allowed, recipient not registered
+- settleWithAuthorization — reputation: updates score, 500 sentinel when contract not set, skips silently
+- Token management: addToken, removeToken, auth checks
+- Admin setters: setTokenMessenger, configureDomain, setGatewayWallet, setSubnameRegistry, setReputationContract
+- UUPS upgrades: owner only, state preservation
+- Implementation: cannot initialize directly
+
+#### Integration Tests (deferred to later session)
+
+1. **Full onboarding → settle → reputation flow:** Deploy all proxies → register subname (sets addressToNode) → set user node on reputation → settleWithAuthorization → verify reputation updated and ENS text record synced to "51"
+2. **Gateway routing end-to-end:** Register recipient with `payment.flow = "gateway"` → settle → verify MockGatewayWallet received `depositFor` with correct recipient and amount
+3. **CCTP routing end-to-end:** Register recipient with `payment.flow = "cctp"` and `payment.cctp = "6"` → settle → verify MockTokenMessengerV2 received `depositForBurn` with correct domain and recipient
+4. **Multi-user settlement isolation:** Register two recipients with different payment preferences → settle to each → verify correct routing per recipient
+5. **Authorization replay protection:** Use same EIP-3009 nonce twice → second call reverts
+6. **Offline settlement flow:** Pre-sign authorization → submit from different address → verify settlement completes correctly
+
+---
+
+## Change 2: ENS Subnames — On-Chain Registrar + Resolver
+
+### Files
+
+| Action | File |
+|--------|------|
+| CREATE | `src/interfaces/INameWrapperMinimal.sol` |
+| CREATE | `src/interfaces/IkhaaliSplitSubnames.sol` |
+| CREATE | `src/khaaliSplitSubnames.sol` |
+| CREATE | `test/khaaliSplitSubnames.t.sol` |
+| CREATE | `test/helpers/MockNameWrapper.sol` |
+| MODIFY | `src/khaaliSplitResolver.sol` (add deprecation NatSpec) |
+
+### `INameWrapperMinimal.sol` — Local minimal interface
+
+Avoids importing full ENS `INameWrapper.sol` (which is in `deny_paths` and has transitive deps). Only the functions we call:
+
+```solidity
+interface INameWrapperMinimal {
+    function setSubnodeRecord(
+        bytes32 parentNode, string calldata label, address owner,
+        address resolver, uint64 ttl, uint32 fuses, uint64 expiry
+    ) external returns (bytes32);
+    function ownerOf(uint256 id) external view returns (address);
+}
+```
+
+### `khaaliSplitSubnames.sol` — Storage
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `nameWrapper` | `INameWrapperMinimal` | NameWrapper contract reference |
+| `parentNode` | `bytes32` | `namehash("khaalisplit.eth")` |
+| `backend` | `address` | Authorized to register + set records |
+| `_addresses` | `mapping(bytes32 => address)` | addr() records |
+| `_texts` | `mapping(bytes32 => mapping(string => string))` | text() records |
+| `reputationContract` | `address` | Authorized to call setText for reputation syncing |
+
+### Key Design
+
+- **`initialize(address _nameWrapper, bytes32 _parentNode, address _backend, address _owner)`**
+- **`register(string label, address owner)`** — Backend only. Calls `nameWrapper.setSubnodeRecord(parentNode, label, owner, address(this), 0, 0, type(uint64).max)`. No fuses burned for now (per user request — fuses deferred to later iteration). Sets default text records + addr.
+- **`setText(bytes32 node, string key, string value)`** — Authorized callers: subname owner (via NameWrapper.ownerOf), backend, or reputationContract.
+- **`setAddr(bytes32 node, address _addr)`** — Same authorization.
+- **`text(bytes32 node, string key)`** — Public view, returns on-chain stored text record.
+- **`addr(bytes32 node)`** — Public view, returns stored address.
+- **`subnameNode(string label)`** — Pure utility: `keccak256(abi.encodePacked(parentNode, keccak256(bytes(label))))`
+- **`supportsInterface()`** — Returns true for `IAddrResolver` (0x3b3b57de), `ITextResolver` (0x59d1d43c), `IERC165` (0x01ffc9a7)
+
+### Authorization Logic
+
+```solidity
+function _isAuthorized(bytes32 node, address caller) internal view returns (bool) {
+    if (caller == backend) return true;
+    if (caller == reputationContract) return true;
+    try nameWrapper.ownerOf(uint256(node)) returns (address owner) {
+        return caller == owner;
+    } catch {
+        return false;
+    }
+}
+```
+
+### Text Records (on-chain, readable by any contract or frontend)
+
+On `register()`, these defaults are set:
+- `com.khaalisplit.subname` = label
+- `com.khaalisplit.reputation` = "50"
+
+User can later set: `display`, `avatar`, `description`, `com.khaalisplit.payment.chain`, `com.khaalisplit.payment.token`, etc.
+
+### Fuse Note
+
+Per user decision: **No fuses burned for now** (pass `0` for fuses in `setSubnodeRecord`). This means the parent retains control. Fuse configuration will be added in a later iteration.
+
+### Deprecation of old Resolver
+
+Add NatSpec deprecation notice to `khaaliSplitResolver.sol`:
+```
+@notice DEPRECATED — This contract is no longer actively used.
+         Replaced by khaaliSplitSubnames.sol which provides on-chain
+         subname registration + text records via ENS NameWrapper.
+         Kept for reference only.
+```
+
+### Implementation Notes (2026-02-07)
+
+**Branch:** `contracts-subnames` (off `contracts` at `9aa3982`)
+**Worktree:** `src/contracts-subnames/`
+
+**Deviations from plan:**
+- **No `INameWrapperMinimal.sol` created.** Instead, removed `wrapper/` and `ethregistrar/` from `deny_paths` in `foundry.toml` and imported the official `INameWrapper` from `@ensdomains/ens-contracts/wrapper/INameWrapper.sol` directly. Only the wrapper `mocks/` and `test/` subdirs remain in deny_paths.
+- **Storage type uses `INameWrapper`** instead of `INameWrapperMinimal` — no functional difference, just uses the real interface.
+- **`_isAuthorized` checks `reputationContract != address(0)`** before granting auth, preventing `address(0)` from being treated as authorized when reputation contract is not yet set.
+- **`register()` includes a duplicate-check** via `nameWrapper.ownerOf()` — reverts with `SubnameAlreadyRegistered` if the node already has an owner.
+
+**What was completed:**
+- `src/interfaces/IkhaaliSplitSubnames.sol` — full interface
+- `src/khaaliSplitSubnames.sol` — full contract (UUPS, init, register, setText, setAddr, text, addr, subnameNode, supportsInterface, admin setters, _isAuthorized)
+- `test/helpers/MockNameWrapper.sol` — mock with setSubnodeRecord, ownerOf, test helpers
+- `test/khaaliSplitSubnames.t.sol` — 47 unit tests (all passing)
+- `src/khaaliSplitResolver.sol` — deprecation NatSpec added
+- `foundry.toml` — deny_paths updated
+
+**Test coverage (47 tests):**
+- Initialization: state, reinit revert, zero-address reverts (nameWrapper, backend, owner)
+- Registration: success + events, default text records, default addr, multiple subnames, auth (not backend, not owner), empty label, zero address, duplicate label
+- setText: by owner, by backend, by reputation contract, overwrite, multiple keys, unauthorized, cross-subname unauthorized, reputation contract zero-address safety
+- setAddr: by owner, by backend, unauthorized
+- Getters: unregistered node returns empty/zero, unset key returns empty
+- subnameNode: computation correctness, different labels, consistency
+- ERC-165: IAddrResolver, ITextResolver, IERC165, unsupported returns false
+- Admin: setBackend (success, not owner, zero address, old backend loses auth), setReputationContract (success, allows zero, not owner)
+- Upgrades: owner only, not owner reverts, state preservation after upgrade
+- Implementation: cannot initialize directly
+
+**What remains for subnames (deployment / integration):**
+- `DeployCore.s.sol` update to deploy subnames proxy and wire reputation contract
+- Integration tests in `UserFlows.t.sol` (see below)
+
+**Integration tests that should be added (`UserFlows.t.sol`):**
+1. **Subname registration flow:** Deploy subnames proxy → backend registers a subname → verify text("com.khaalisplit.subname") and addr() return correct values → owner sets custom text records (display, avatar) → verify reads
+2. **Reputation sync flow:** Deploy subnames + reputation proxies → wire reputation contract → backend registers subname and sets user node → reputation contract calls setText to update score → verify text("com.khaalisplit.reputation") updated on subnames contract
+3. **End-to-end register → settle → reputation → ENS sync:** Register subname → settle expense → backend calls recordSettlement on reputation → reputation syncs score to ENS text record → verify final score via subnames.text()
+4. **Authorization boundary test:** Register two subnames for different users → verify neither can modify the other's records → verify backend can modify both → verify reputation contract can modify both
+
+---
+
+## Change 3: Reputation — On-Chain Scoring
+
+### Files
+
+| Action | File |
+|--------|------|
+| CREATE | `src/interfaces/IkhaaliSplitReputation.sol` |
+| CREATE | `src/khaaliSplitReputation.sol` |
+| CREATE | `test/khaaliSplitReputation.t.sol` |
+| CREATE | `test/helpers/MockSubnames.sol` |
+
+### `khaaliSplitReputation.sol` — Storage
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `backend` | `address` | Authorized backend/relayer |
+| `subnameRegistry` | `IkhaaliSplitSubnames` | For ENS text record updates |
+| `scores` | `mapping(address => uint256)` | Reputation scores |
+| `_initialized` | `mapping(address => bool)` | Track first interaction |
+| `userNodes` | `mapping(address => bytes32)` | User → ENS subname node |
+
+### Constants
+
+```
+DEFAULT_SCORE = 50
+MAX_SCORE = 100
+MIN_SCORE = 0
+SUCCESS_DELTA = 1
+FAILURE_DELTA = 5
+```
+
+### Key Design
+
+- **`initialize(address _backend, address _subnameRegistry, address _owner)`**
+- **`recordSettlement(address user, bool success)`** — Backend only:
+  1. Auto-initialize to 50 on first call
+  2. Success: `score = min(score + 1, 100)`
+  3. Failure: `score = score > 5 ? score - 5 : 0`
+  4. Emit `ReputationUpdated(user, newScore, wasSuccess)`
+  5. If `userNodes[user] != 0` && `subnameRegistry != 0`: call `subnameRegistry.setText(node, "com.khaalisplit.reputation", Strings.toString(score))`
+- **`setUserNode(address user, bytes32 node)`** — Backend only. Called after user registers ENS subname.
+- **`getReputation(address user)`** — Returns `DEFAULT_SCORE` if uninitialized, else stored score.
+- Uses OZ `Strings.toString()` for uint→string conversion.
+
+### Events
+
+- `ReputationUpdated(address indexed user, uint256 newScore, bool wasSuccess)`
+- `UserNodeSet(address indexed user, bytes32 indexed node)`
+
+### Implementation Notes (2026-02-07)
+
+**Branch:** `contracts-reputation` (off `contracts` at `7279b7d`)
+**Worktree:** `src/contracts-reputation/`
+
+**Deviations from plan:**
+- **`initialize` signature changed:** `initialize(address _backend, address _subnameRegistry, address _settlementContract, address _owner)` — added `_settlementContract` param. The settlement contract (not the backend) is the authorized caller for `recordSettlement()`. This removes the need for a trusted backend relay for score updates — the settlement contract calls reputation directly after each settlement.
+- **`settlementContract` storage added:** New `address public settlementContract` field. `recordSettlement()` checks `msg.sender == settlementContract` instead of `msg.sender == backend`.
+- **`_initialized` mapping renamed to `_hasRecord`:** Clearer intent — tracks whether a user has had at least one settlement recorded. Needed to distinguish "default 50" from "score dropped to exactly 50 after updates". No storage savings vs. the plan (we still need the mapping because score=0 is a valid state after many failures).
+- **`recordSettlement` reverts if `userNodes[user] == bytes32(0)`:** Added `UserNodeNotSet()` custom error. Users must complete onboarding (subname registration → setUserNode) before settlements can update their reputation. TODO: revisit what happens in a trustless scenario — users interacting outside the client won't have a node set.
+- **`setUserNode` guards against zero address and zero node:** Added `ZeroAddress()` and `ZeroNode()` custom errors.
+- **Three admin setters added:** `setBackend()`, `setSubnameRegistry()`, `setSettlementContract()` — all owner-only. `setSubnameRegistry` and `setSettlementContract` allow `address(0)` (disable functionality). `setBackend` requires non-zero.
+- **Additional events:** `BackendUpdated`, `SubnameRegistryUpdated`, `SettlementContractUpdated` — emitted by admin setters.
+
+**What was completed:**
+- `src/interfaces/IkhaaliSplitReputation.sol` — full interface
+- `src/khaaliSplitReputation.sol` — full contract (UUPS, init, recordSettlement, setUserNode, getReputation, admin setters, _syncToENS, _hasRecord tracking)
+- `test/helpers/MockSubnames.sol` — mock with setText, text, call recording, forced revert toggle
+- `test/khaaliSplitReputation.t.sol` — 60 unit tests (all passing)
+
+**Test coverage (60 tests):**
+- Initialization: state, reinit revert, zero-address reverts (backend, owner), zero subnameRegistry allowed, zero settlementContract allowed
+- Constants: DEFAULT_SCORE, MAX_SCORE, MIN_SCORE, SUCCESS_DELTA, FAILURE_DELTA
+- getReputation: default for unknown user, default before settlement, after success, after failure
+- recordSettlement — success: increments score, emits event, multiple successes, capped at 100, stays at 100
+- recordSettlement — failure: decrements score, emits event, multiple failures, floored at 0, stays at 0
+- recordSettlement — mixed: success then failure, failure then success
+- recordSettlement — ENS sync: syncs to ENS, multiple updates with correct values, no sync when registry is zero, correct node per user, correct string at 0, correct string at 100
+- recordSettlement — auth: not settlement contract reverts, backend reverts, owner reverts, userNodeNotSet reverts
+- setUserNode: success, multiple users, not backend reverts, owner reverts, settlement reverts, zero user reverts, zero node reverts
+- Admin — setBackend: success, not owner reverts, zero address reverts, old backend loses auth
+- Admin — setSubnameRegistry: success, allows zero, not owner reverts
+- Admin — setSettlementContract: success, allows zero, not owner reverts, old settlement loses auth
+- Multi-user: scores are independent
+- Edge cases: first call initializes to default, score at 5 → failure → 0 (exact boundary), score at 1 → failure → 0 (underflow protection), score at 99 → success → 100 (exact boundary)
+- Upgrades: owner only, not owner reverts, state preservation after upgrade
+- Implementation: cannot initialize directly
+
+**What remains for reputation (deployment / integration):**
+- `DeployCore.s.sol` update to deploy reputation proxy and wire to subnames + settlement
+- Wire `subnames.setReputationContract(reputationProxy)` in deploy script
+- Settlement contract integration: settlement must call `reputation.recordSettlement(user, true/false)` after each settlement
+
+**Integration tests that should be added (`UserFlows.t.sol`):**
+1. **Reputation recording flow:** Deploy reputation + subnames proxies → wire reputation contract on subnames → backend registers subname and sets user node → settlement contract calls recordSettlement → verify score updated and ENS text record synced
+2. **Full onboarding → settle → reputation flow:** Deploy all proxies → register subname → set user node → settlement calls recordSettlement(user, true) → verify text("com.khaalisplit.reputation") returns "51" on subnames contract
+3. **Multi-user reputation isolation:** Register two users → record different outcomes for each → verify independent scores and independent ENS syncs
+4. **Wiring verification:** Deploy reputation with settlementContract=address(0) → verify recordSettlement reverts from any caller → owner sets settlementContract → verify it now works from that address only
+
+---
+
+## Deployment Script Changes
+
+### `DeployCore.s.sol` — Updated
+
+**Deployment order:**
+1. `kdioDeployer` factory
+2. `khaaliSplitFriends` impl + proxy (unchanged)
+3. `khaaliSplitGroups` impl + proxy (unchanged)
+4. `khaaliSplitExpenses` impl + proxy (unchanged)
+5. `khaaliSplitSubnames` impl + proxy — init: `(nameWrapperAddr, parentNode, backendAddr, ownerAddr)`
+6. `khaaliSplitReputation` impl + proxy — init: `(backendAddr, subnamesProxy, ownerAddr)`
+7. Wire: `subnames.setReputationContract(reputationProxy)` (owner call)
+
+**Env vars changed:**
+- Remove: `GATEWAY_URL`, `GATEWAY_SIGNER`
+- Add: `NAME_WRAPPER_ADDRESS`, `PARENT_NODE`
+
+### `DeploySettlement.s.sol` — Updated
+
+After existing init + addToken calls, add CCTP config from `script/cctp.json`:
+- `setTokenMessenger()`
+- `configureDomain()` for each chain pair
+- `setGatewayWallet()` (optional)
+
+---
+
+## Test Strategy
+
+### MockTokenMessengerV2 (new helper)
+- Implements `depositForBurn()`, pulls tokens from caller, records call params
+- Lets tests assert CCTP was called with correct args
+
+### MockNameWrapper (new helper)
+- Implements `setSubnodeRecord()`, tracks subnode ownership
+- Implements `ownerOf()` for authorization tests
+
+### MockSubnames (new helper)
+- Implements `setText()`, records calls for assertion
+- Used by reputation tests to verify ENS sync
+
+### Test Counts (approximate)
+
+| Contract | Test Cases |
+|----------|-----------|
+| Settlement | ~25 tests: init, token mgmt, CCTP config, same-chain settle, cross-chain settle, permit variants, gateway variants, validations, upgrade |
+| Subnames | ~20 tests: init, register, text records (owner/backend/reputation auth), addr records, ERC-165, admin, upgrade |
+| Reputation | ~18 tests: init, score queries, increment/decrement/cap/floor, ENS sync, user nodes, admin, upgrade |
+
+### Integration Test (`UserFlows.t.sol`)
+
+Update existing settlement flow to use MockTokenMessengerV2 + new settlement pattern. Add new flow: registration → reputation update → ENS text record verification.
+
+---
+
+## Files Summary
+
+### CREATE (13 files)
+
+1. `src/interfaces/IkhaaliSplitSettlement.sol`
+2. `src/interfaces/ITokenMessengerV2.sol`
+3. `src/interfaces/IkhaaliSplitSubnames.sol`
+4. `src/interfaces/INameWrapperMinimal.sol`
+5. `src/interfaces/IkhaaliSplitReputation.sol`
+6. `src/khaaliSplitSubnames.sol`
+7. `src/khaaliSplitReputation.sol`
+8. `test/khaaliSplitSubnames.t.sol`
+9. `test/khaaliSplitReputation.t.sol`
+10. `test/helpers/MockTokenMessengerV2.sol`
+11. `test/helpers/MockNameWrapper.sol`
+12. `test/helpers/MockSubnames.sol`
+13. `script/cctp.json`
+
+### REWRITE (3 files)
+
+14. `src/khaaliSplitSettlement.sol`
+15. `test/khaaliSplitSettlement.t.sol`
+16. `script/tokens.json` — USDC only, approved chains only (Sepolia, Base Sepolia, Arc Testnet, Ethereum Mainnet, Base Mainnet)
+
+### MODIFY (4 files)
+
+17. `script/DeployCore.s.sol` — Replace resolver with subnames + reputation
+18. `script/DeploySettlement.s.sol` — Add CCTP config post-init
+19. `test/integration/UserFlows.t.sol` — Update settlement + add reputation flow
+20. `src/khaaliSplitResolver.sol` — Add deprecation NatSpec notice
+
+---
+
+## Verification
+
+1. **Compile**: `forge build` — all contracts compile with no errors
+2. **Unit tests**: `forge test` — all new + rewritten tests pass
+3. **Gas check**: `forge test --gas-report` — verify settlement + reputation gas costs are reasonable
+4. **Integration**: Run `UserFlows.t.sol` end-to-end
+5. **Deployment dry-run**: `forge script script/DeployCore.s.sol --rpc-url sepolia` (no --broadcast) to verify script logic
+6. **Deployment dry-run**: `forge script script/DeploySettlement.s.sol --rpc-url sepolia` (no --broadcast)

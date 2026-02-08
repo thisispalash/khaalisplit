@@ -1,0 +1,22 @@
+{
+  "tokenMessenger": {
+    "testnet": "0x8fe6b999dc680ccfdd5bf7eb0974218be2542daa",
+    "mainnet": "0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d"
+  },
+  "gatewayWallet": {
+    "testnet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "mainnet": "0x0000000000000000000000000000000000000000"
+  },
+  "gatewayMinter": {
+    "testnet": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B",
+    "mainnet": "0x0022222ABE238Cc2C7Bb1f21003F0a260052475B"
+  },
+  "domains": {
+    "11155111": { "name": "sepolia",         "domain": 0 },
+    "84532":   { "name": "baseSepolia",      "domain": 6 },
+    "421614":  { "name": "arbitrumSepolia",  "domain": 3 },
+    "11155420":{ "name": "optimismSepolia",  "domain": 2 },
+    "1":       { "name": "ethereum",         "domain": 0 },
+    "8453":    { "name": "base",             "domain": 6 }
+  }
+}

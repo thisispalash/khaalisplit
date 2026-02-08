@@ -9,17 +9,22 @@ import {IExtendedResolver} from "@ensdomains/ens-contracts/resolvers/profiles/IE
 
 /**
  * @title khaaliSplitResolver
- * @notice CCIP-Read (EIP-3668) off-chain resolver for khaaliSplit ENS subnames.
- *         Implements IExtendedResolver (0x9061b923) to handle wildcard resolution
- *         of `{username}.khaalisplit.eth` subnames via an off-chain gateway.
+ * @notice DEPRECATED — This contract is no longer actively used.
+ *         Replaced by khaaliSplitSubnames.sol which provides on-chain
+ *         subname registration + text records via ENS NameWrapper.
+ *         Kept for reference only.
  *
- * @dev Flow:
- *   1. Client calls `resolve(name, data)` → reverts with `OffchainLookup`
- *   2. Client fetches result from gateway URL
- *   3. Client calls `resolveWithProof(response, extraData)` → verifies signature, returns result
+ * @dev Original purpose: CCIP-Read (EIP-3668) off-chain resolver for khaaliSplit
+ *      ENS subnames. Implemented IExtendedResolver (0x9061b923) to handle wildcard
+ *      resolution of `{username}.khaalisplit.eth` subnames via an off-chain gateway.
  *
- *   Uses OZ ECDSA.recover() to recover the signer from the gateway response,
- *   then checks the recovered address against the trusted `signers` mapping.
+ *      Flow:
+ *        1. Client calls `resolve(name, data)` → reverts with `OffchainLookup`
+ *        2. Client fetches result from gateway URL
+ *        3. Client calls `resolveWithProof(response, extraData)` → verifies signature, returns result
+ *
+ *      Uses OZ ECDSA.recover() to recover the signer from the gateway response,
+ *      then checks the recovered address against the trusted `signers` mapping.
  */
 contract khaaliSplitResolver is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     using ECDSA for bytes32;

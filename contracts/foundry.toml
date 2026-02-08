@@ -36,11 +36,12 @@ deny_paths = [
   "lib/ens-contracts/contracts/reverseRegistrar",
   "lib/ens-contracts/contracts/ccipRead",
   "lib/ens-contracts/contracts/universalResolver",
-  "lib/ens-contracts/contracts/ethregistrar",
-  "lib/ens-contracts/contracts/wrapper",
   "lib/ens-contracts/contracts/root",
   "lib/ens-contracts/contracts/dnssec-oracle",
   "lib/ens-contracts/contracts/dnsregistrar",
+  # wrapper/ and ethregistrar/ removed — needed for INameWrapper imports in khaaliSplitSubnames
+  "lib/ens-contracts/contracts/wrapper/mocks",
+  "lib/ens-contracts/contracts/wrapper/test",
 ]
 
 # Remappings
@@ -51,13 +52,20 @@ remappings = [
   "@ensdomains/ens-contracts/=lib/ens-contracts/contracts/",
 ]
 
+# Filesystem permissions (needed for vm.writeJson in deploy scripts)
+fs_permissions = [{ access = "read-write", path = "./" }]
+
 # RPC endpoints
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"
-arc_testnet = "https://rpc.testnet.arc.network"
-base = "${BASE_RPC_URL}"
-arbitrum = "${ARBITRUM_RPC_URL}"
+base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
+arbitrum_sepolia = "${ARBITRUM_SEPOLIA_RPC_URL}"
+optimism_sepolia = "${OPTIMISM_SEPOLIA_RPC_URL}"
+arc_testnet = "${ARC_TESTNET_RPC_URL}"
 
-# Block explorer verification
+# Block explorer verification (Etherscan V2 — single API key, unified endpoint)
 [etherscan]
-sepolia = { key = "${ETHERSCAN_API_KEY}", chain = "sepolia" }
+sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=11155111" }
+base_sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=84532" }
+arbitrum_sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=421614" }
+optimism_sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=11155420" }
