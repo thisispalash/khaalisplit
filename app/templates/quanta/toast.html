@@ -1,0 +1,22 @@
+{# quanta/toast.html — Toast notification (OOB swap)
+   Params:
+     message  : string (required)
+     type     : success | error | info (default: info)
+     toast_id : string (default: "auto")
+   Preserves: hx-swap-oob pattern + Hyperscript auto-dismiss from partials/toast.html
+#}
+
+{% with t=type|default:"info" tid=toast_id|default:"auto" %}
+
+<div id="toast-{{ tid }}"
+  hx-swap-oob="afterbegin:#toast-container"
+  class="pointer-events-auto px-4 py-3 rounded-md text-sm shadow-lg animate-fade-in{% if t == 'error' %} bg-accent-muted text-foreground border border-foreground font-medium{% elif t == 'success' %} bg-emphasis-muted text-emphasis border border-emphasis{% else %} bg-surface-raised text-foreground border border-border{% endif %}"
+  _="
+    on load
+      wait 4s
+      transition opacity to 0 over 300ms
+      remove me
+  "
+>{{ message }}</div>
+
+{% endwith %}
