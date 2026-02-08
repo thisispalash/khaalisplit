@@ -82,6 +82,97 @@ graph TB
 | **khaaliSplitReputation** | Sepolia | Per-user reputation score (0–100), auto-synced to ENS text records | UUPS |
 | **khaaliSplitSettlement** | All | USDC payment router — EIP-3009 auth + Gateway/CCTP routing | UUPS |
 
+## Inter-Contract Call Flow
+
+A single settlement touches nearly every contract. This sequence shows the full chain of cross-contract calls.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Backend
+    participant Friends as khaaliSplitFriends
+    participant Groups as khaaliSplitGroups
+    participant Expenses as khaaliSplitExpenses
+    participant Subnames as khaaliSplitSubnames
+    participant NW as ENS NameWrapper
+    participant Settlement as khaaliSplitSettlement
+    participant USDC
+    participant GW as Gateway Wallet
+    participant Rep as khaaliSplitReputation
+
+    rect rgb(240, 249, 255)
+        Note right of User: Phase 1 — Onboarding
+        Backend ->> Friends: registerPubKey(user, pubKey)
+        Backend ->> Subnames: register("alice", user)
+        Subnames ->> NW: setSubnodeRecord(parentNode, ...)
+        Backend ->> Rep: setUserNode(user, node)
+    end
+
+    rect rgb(240, 255, 244)
+        Note right of User: Phase 2 — Social
+        User ->> Friends: requestFriend(bob)
+        User ->> Groups: createGroup(nameHash, encKey)
+        Groups ->> Friends: registered(user)?
+        User ->> Groups: inviteMember(1, bob, encKeyForBob)
+        Groups ->> Friends: isFriend(user, bob)?
+    end
+
+    rect rgb(255, 247, 237)
+        Note right of User: Phase 3 — Expenses
+        User ->> Expenses: addExpense(groupId, hash, encData)
+        Expenses ->> Groups: isMember(groupId, user)?
+    end
+
+    rect rgb(245, 243, 255)
+        Note right of User: Phase 4 — Settlement
+        User ->> Settlement: settleWithAuthorization(node, amt, ...)
+        Settlement ->> Subnames: addr(node)
+        Settlement ->> Subnames: text(node, "payment.token")
+        Settlement ->> USDC: receiveWithAuthorization(...)
+        Settlement ->> Subnames: text(node, "payment.flow")
+        Settlement ->> GW: depositFor(token, recipient, amt)
+        Settlement ->> Rep: recordSettlement(sender, true)
+        Rep ->> Subnames: setText(node, "reputation", "51")
+    end
+```
+
+## Social Layer Dependency Chain
+
+The Social layer forms a strict dependency chain where each contract validates against the previous one.
+
+```mermaid
+sequenceDiagram
+    actor Alice
+    participant Friends as khaaliSplitFriends
+    participant Groups as khaaliSplitGroups
+    participant Expenses as khaaliSplitExpenses
+
+    Note over Alice,Expenses: Every action validates against the upstream contract
+
+    Alice ->> Friends: registerPubKey(alice, pubKey)
+    Note over Friends: registered[alice] = true
+
+    Alice ->> Groups: createGroup(nameHash, encKey)
+    Groups ->> Friends: registered(alice)?
+    Friends -->> Groups: true ✓
+    Note over Groups: Group #1 created, alice is member
+
+    Alice ->> Groups: inviteMember(1, bob, encKeyForBob)
+    Groups ->> Friends: isFriend(alice, bob)?
+    Friends -->> Groups: true ✓
+    Note over Groups: isInvited[1][bob] = true
+
+    Alice ->> Expenses: addExpense(1, dataHash, encData)
+    Expenses ->> Groups: isMember(1, alice)?
+    Groups -->> Expenses: true ✓
+    Note over Expenses: Expense #1 stored
+
+    Alice ->> Expenses: updateExpense(1, newHash, newData)
+    Expenses ->> Groups: isMember(1, alice)?
+    Groups -->> Expenses: true ✓
+    Note over Expenses: Only creator can update
+```
+
 ## Key Design Patterns
 
 - **All contracts are UUPS upgradeable** — `Initializable` + `UUPSUpgradeable` + `OwnableUpgradeable`

@@ -114,6 +114,92 @@ sequenceDiagram
 
 ---
 
+## Subname Registration Sequence
+
+How a new ENS subname is registered and wired into the system:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant PWA as PWA Client
+    participant Backend
+    participant Subnames as khaaliSplitSubnames
+    participant NW as ENS NameWrapper
+    participant Rep as khaaliSplitReputation
+
+    User ->> PWA: Choose username "alice"
+    PWA ->> Backend: Request registration
+
+    Backend ->> Subnames: register("alice", userAddr)
+
+    Note over Subnames: Checks:<br/>msg.sender == backend? ✓<br/>label not empty? ✓<br/>owner != address(0)? ✓
+
+    Subnames ->> NW: ownerOf(uint256(node))
+    NW -->> Subnames: address(0) (not registered)
+
+    Subnames ->> NW: setSubnodeRecord(<br/>  parentNode, "alice",<br/>  userAddr, resolver=this,<br/>  ttl=0, fuses=0,<br/>  expiry=max)
+
+    Note over NW: alice.khaalisplit.eth<br/>now exists in ENS!<br/>Owner = userAddr<br/>Resolver = Subnames contract
+
+    Subnames ->> Subnames: Set default records:<br/>text("subname") = "alice"<br/>text("reputation") = "50"<br/>addr(node) = userAddr
+
+    Subnames -->> Backend: SubnameRegistered event
+
+    Note over Backend: Now link user to<br/>reputation system
+
+    Backend ->> Rep: setUserNode(userAddr, aliceNode)
+    Note over Rep: userNodes[userAddr] = node<br/>Ready for scoring!
+
+    Backend -->> PWA: Registration complete
+    PWA -->> User: alice.khaalisplit.eth is yours!
+```
+
+---
+
+## Record Update Authorization Sequence
+
+How the `_isAuthorized` check works when different callers try to set records:
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Subnames as khaaliSplitSubnames
+    participant NW as ENS NameWrapper
+
+    Note over Caller,NW: Case 1: Backend sets a record
+
+    Caller ->> Subnames: setText(node, key, value)
+    Subnames ->> Subnames: _isAuthorized(node, caller)
+    Note over Subnames: caller == backend?<br/>✓ YES → authorized
+    Subnames ->> Subnames: _texts[node][key] = value
+    Subnames -->> Caller: TextRecordSet event
+
+    Note over Caller,NW: Case 2: Reputation contract syncs score
+
+    Caller ->> Subnames: setText(node, "reputation", "51")
+    Subnames ->> Subnames: _isAuthorized(node, caller)
+    Note over Subnames: caller == backend? No<br/>reputationContract != 0 &&<br/>caller == reputationContract?<br/>✓ YES → authorized
+    Subnames ->> Subnames: _texts[node]["reputation"] = "51"
+
+    Note over Caller,NW: Case 3: Subname owner sets own record
+
+    Caller ->> Subnames: setText(node, "avatar", "url")
+    Subnames ->> Subnames: _isAuthorized(node, caller)
+    Note over Subnames: caller == backend? No<br/>caller == reputationContract? No
+    Subnames ->> NW: ownerOf(uint256(node))
+    NW -->> Subnames: ownerAddress
+    Note over Subnames: caller == ownerAddress?<br/>✓ YES → authorized
+
+    Note over Caller,NW: Case 4: Unauthorized caller
+
+    Caller ->> Subnames: setText(node, key, value)
+    Subnames ->> Subnames: _isAuthorized(node, caller)
+    Note over Subnames: Not backend, not reputation,<br/>not owner → REVERT
+    Subnames -->> Caller: Unauthorized()
+```
+
+---
+
 ## Authorization Model
 
 Three contracts share a trust relationship for reading and writing ENS records:
@@ -210,4 +296,61 @@ graph TD
     class PK,SS t1
     class GK,EGK t2
     class EXP,HASH,BLOB t3
+```
+
+### Encryption Key Exchange Sequence
+
+How encrypted group keys are distributed when creating a group and inviting members:
+
+```mermaid
+sequenceDiagram
+    actor Alice
+    participant PWA_A as Alice's PWA
+    participant Friends as khaaliSplitFriends
+    participant Groups as khaaliSplitGroups
+    participant PWA_B as Bob's PWA
+    actor Bob
+
+    Note over Alice: Step 1: Derive shared secrets
+
+    PWA_A ->> Friends: getPubKey(alice)
+    Friends -->> PWA_A: alicePubKey (ECDH)
+
+    PWA_A ->> Friends: getPubKey(bob)
+    Friends -->> PWA_A: bobPubKey (ECDH)
+
+    PWA_A ->> PWA_A: selfSecret = ECDH(alicePriv, alicePub)
+    PWA_A ->> PWA_A: pairSecret = ECDH(alicePriv, bobPub)
+
+    Note over Alice: Step 2: Create group
+
+    PWA_A ->> PWA_A: groupKey = random AES-256 key
+    PWA_A ->> PWA_A: encKeyForAlice = AES.encrypt(<br/>  groupKey, selfSecret)
+
+    Alice ->> Groups: createGroup(nameHash, encKeyForAlice)
+    Note over Groups: Group #1 created<br/>encryptedGroupKey[1][alice]<br/>= encKeyForAlice
+
+    Note over Alice: Step 3: Invite Bob
+
+    PWA_A ->> PWA_A: encKeyForBob = AES.encrypt(<br/>  groupKey, pairSecret)
+
+    Alice ->> Groups: inviteMember(1, bob, encKeyForBob)
+    Note over Groups: encryptedGroupKey[1][bob]<br/>= encKeyForBob
+
+    Note over Bob: Step 4: Bob decrypts
+
+    Bob ->> Groups: acceptGroupInvite(1)
+
+    PWA_B ->> Groups: encryptedGroupKey(1, bob)
+    Groups -->> PWA_B: encKeyForBob
+
+    PWA_B ->> Friends: getPubKey(alice)
+    Friends -->> PWA_B: alicePubKey
+
+    PWA_B ->> PWA_B: pairSecret = ECDH(bobPriv, alicePub)
+    Note over PWA_B: Same shared secret as Alice<br/>computed (ECDH is symmetric)
+
+    PWA_B ->> PWA_B: groupKey = AES.decrypt(<br/>  encKeyForBob, pairSecret)
+
+    Note over Bob: Bob now has the group AES key<br/>and can encrypt/decrypt expenses!
 ```

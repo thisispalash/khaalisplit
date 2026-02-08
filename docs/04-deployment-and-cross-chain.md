@@ -178,3 +178,124 @@ graph LR
 - Storage lives in the proxy, logic lives in the implementation
 - Only the contract owner can trigger upgrades (`_authorizeUpgrade` + `onlyOwner`)
 - Constructor calls `_disableInitializers()` to prevent direct implementation initialization
+
+---
+
+## Cross-Chain Settlement Sequence (CCTP End-to-End)
+
+How a payment moves from Sepolia to Base via CCTP burn-and-mint:
+
+```mermaid
+sequenceDiagram
+    actor Alice as Alice (Sepolia)
+    participant SetS as Settlement<br/>(Sepolia)
+    participant USDC_S as USDC<br/>(Sepolia)
+    participant TM_S as TokenMessengerV2<br/>(Sepolia)
+    participant Circle as Circle Attestation<br/>Service (off-chain)
+    participant TM_B as MessageTransmitter<br/>(Base)
+    participant USDC_B as USDC<br/>(Base)
+    actor Bob as Bob (Base)
+
+    Note over Alice: Signs EIP-3009 auth<br/>on Sepolia
+
+    Alice ->> SetS: settleWithAuthorization(...)
+
+    SetS ->> USDC_S: receiveWithAuthorization(...)
+    Note over USDC_S: 20 USDC pulled from Alice<br/>to Settlement contract
+
+    Note over SetS: Recipient's ENS says:<br/>payment.flow = "cctp"<br/>payment.cctp = "6" (Base)
+
+    SetS ->> USDC_S: forceApprove(TokenMessenger, 20)
+    SetS ->> TM_S: depositForBurn(<br/>  20, domain=6,<br/>  bytes32(bob), USDC)
+
+    Note over TM_S: Burns 20 USDC on Sepolia<br/>Emits MessageSent event
+
+    TM_S -->> Circle: MessageSent event observed
+
+    Note over Circle: Generates attestation<br/>for the burn message
+
+    Circle -->> TM_B: receiveMessage(<br/>  message, attestation)
+
+    TM_B ->> USDC_B: mint(bob, 20)
+
+    Note over Bob: 20 USDC arrives on Base!
+```
+
+---
+
+## Cross-Chain Settlement Sequence (Gateway Mint)
+
+How a payment moves cross-chain via Circle Gateway (burn on source → attestation → mint on destination):
+
+```mermaid
+sequenceDiagram
+    actor Alice as Alice (Base)
+    participant Backend as khaaliSplit Backend
+    participant CircleAPI as Circle Gateway API
+    participant SetS as Settlement<br/>(Sepolia)
+    participant GM as Gateway Minter<br/>(Sepolia)
+    participant USDC_S as USDC<br/>(Sepolia)
+    participant GW_S as Gateway Wallet<br/>(Sepolia)
+    actor Bob as Bob (Sepolia)
+
+    Note over Alice: Signs BurnIntent (EIP-712)<br/>on Base, destination = Sepolia
+
+    Alice -->> Backend: Submit BurnIntent signature
+
+    Backend ->> CircleAPI: POST /v1/transfer<br/>(from Base → Sepolia)
+    CircleAPI -->> Backend: attestationPayload +<br/>attestationSignature
+
+    Backend ->> SetS: settleFromGateway(<br/>  attestation, sig,<br/>  bobNode, alice, memo)
+
+    SetS ->> USDC_S: balanceOf(Settlement)
+    USDC_S -->> SetS: balanceBefore = 0
+
+    SetS ->> GM: gatewayMint(attestation, sig)
+    Note over GM: Verifies Circle attestation<br/>Mints 20 USDC → Settlement
+
+    SetS ->> USDC_S: balanceOf(Settlement)
+    USDC_S -->> SetS: balanceAfter = 20
+    Note over SetS: amount = 20
+
+    Note over SetS: Bob's ENS says:<br/>payment.flow = "gateway"
+
+    SetS ->> USDC_S: forceApprove(GatewayWallet, 20)
+    SetS ->> GW_S: depositFor(USDC, bob, 20)
+
+    Note over Bob: 20 USDC in Bob's<br/>Gateway balance on Sepolia!
+```
+
+---
+
+## UUPS Upgrade Sequence
+
+How a contract upgrade works, showing the on-chain transaction flow:
+
+```mermaid
+sequenceDiagram
+    actor Owner as Contract Owner
+    participant Proxy as ERC1967Proxy<br/>(fixed address)
+    participant ImplV1 as Implementation V1<br/>(current)
+    participant ImplV2 as Implementation V2<br/>(new)
+
+    Note over Owner: Step 1: Deploy new implementation
+
+    Owner ->> ImplV2: deploy (regular CREATE)
+    Note over ImplV2: Constructor calls<br/>_disableInitializers()<br/>(cannot be initialized directly)
+
+    Note over Owner: Step 2: Upgrade proxy
+
+    Owner ->> Proxy: upgradeToAndCall(implV2, "")
+    Proxy ->> ImplV1: _authorizeUpgrade(implV2)<br/>(delegatecall)
+    Note over ImplV1: require(owner == msg.sender) ✓
+
+    Proxy ->> Proxy: Update ERC1967<br/>implementation slot<br/>to implV2 address
+
+    Note over Proxy: All future calls now<br/>delegatecall to ImplV2
+
+    Note over Owner: Step 3: Verify
+
+    Owner ->> Proxy: someFunction()
+    Proxy ->> ImplV2: someFunction()<br/>(delegatecall)
+    Note over ImplV2: New logic executes<br/>with existing storage<br/>Address unchanged ✓
+```
