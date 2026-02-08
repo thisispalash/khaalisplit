@@ -1,0 +1,27 @@
+{# quanta/badge.html — Status badge primitive
+   Params:
+     status : pending | invited | submitted | bridging | confirmed | accepted | failed | left | default
+     label  : string (required)
+     pulse  : "true" / omit — adds pulse animation
+#}
+
+{% with s=status|default:"default" %}
+
+{% if s == "pending" or s == "invited" or s == "submitted" %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-muted bg-surface-raised{% if pulse == 'true' %} animate-pulse-soft{% endif %}">{{ label }}</span>
+
+{% elif s == "bridging" %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-muted bg-surface-raised animate-pulse-soft">{{ label }}</span>
+
+{% elif s == "confirmed" or s == "accepted" %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-emphasis bg-emphasis-muted">{{ label }}</span>
+
+{% elif s == "failed" %}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-foreground bg-accent-muted">{{ label }}</span>
+
+{% else %}{# left, default #}
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-dim bg-dim-muted">{{ label }}</span>
+
+{% endif %}
+
+{% endwith %}

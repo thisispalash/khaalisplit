@@ -10,16 +10,9 @@ class AddExpenseForm(forms.Form):
   encrypted payload.
   """
 
-  WIDGET_CLASSES = (
-    'w-full px-3 py-2 bg-background border border-foreground/20 rounded-md '
-    'text-foreground text-sm placeholder-foreground/40 focus:outline-none '
-    'focus:border-foreground/40'
-  )
-
   description = forms.CharField(
     max_length=500,
     widget=forms.TextInput(attrs={
-      'class': WIDGET_CLASSES,
       'placeholder': 'What was it for?',
     }),
   )
@@ -27,7 +20,6 @@ class AddExpenseForm(forms.Form):
     max_digits=18,
     decimal_places=6,
     widget=forms.NumberInput(attrs={
-      'class': WIDGET_CLASSES,
       'placeholder': '0.00',
       'step': '0.01',
       'min': '0.01',
@@ -36,15 +28,12 @@ class AddExpenseForm(forms.Form):
   split_type = forms.ChoiceField(
     choices=CachedExpense.SplitType.choices,
     initial=CachedExpense.SplitType.EQUAL,
-    widget=forms.Select(attrs={
-      'class': WIDGET_CLASSES,
-    }),
+    widget=forms.Select(),
   )
   category = forms.CharField(
     max_length=50,
     required=False,
     widget=forms.TextInput(attrs={
-      'class': WIDGET_CLASSES,
       'placeholder': 'Category (optional)',
     }),
   )

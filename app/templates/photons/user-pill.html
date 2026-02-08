@@ -1,0 +1,37 @@
+{# photons/user-pill.html — User identity display
+   Context:
+     user : user object with .subname, .display_name, .avatar_url
+   Params:
+     link : "true" / "false" (default: "false") — wraps in <a> to profile
+     size : sm | md (default: md)
+#}
+
+{% with s=size|default:"md" %}
+
+{% if link == "true" %}
+<a href="/u/{{ user.subname }}/" class="inline-flex items-center gap-2 group">
+{% else %}
+<span class="inline-flex items-center gap-2">
+{% endif %}
+
+  {% if user.avatar_url %}
+    <img src="{{ user.avatar_url }}"
+      alt="{{ user.subname }}"
+      class="rounded-full object-cover {% if s == 'sm' %}w-5 h-5{% else %}w-6 h-6{% endif %}"
+    >
+  {% endif %}
+
+  <span class="{% if s == 'sm' %}text-xs{% else %}text-sm{% endif %}">
+    <span class="font-mono {% if link == 'true' %}group-hover:text-foreground{% endif %}">{{ user.subname }}</span>
+    {% if user.display_name %}
+      <span class="text-subtle {% if s == 'sm' %}text-xs{% else %}text-xs{% endif %} ml-1">{{ user.display_name }}</span>
+    {% endif %}
+  </span>
+
+{% if link == "true" %}
+</a>
+{% else %}
+</span>
+{% endif %}
+
+{% endwith %}

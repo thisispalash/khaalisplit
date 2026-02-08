@@ -1,0 +1,24 @@
+{# quanta/button.html — Stateless button/link primitive
+   Params:
+     variant  : primary | secondary | danger | ghost  (default: primary)
+     size     : sm | md | lg                          (default: md)
+     label    : string                                (required)
+     type     : submit | button                       (default: button)
+     full_width : "true" / omit
+     href     : URL (renders <a> instead of <button>) / omit
+     extra_classes : string / omit
+     extra_attrs   : raw HTML for hx-*, _= etc / omit
+#}
+
+{% with v=variant|default:"primary" s=size|default:"md" %}
+
+{# ── Size classes ─────────────────────────────────── #}
+{% if s == "sm" %}
+  {% with size_cls="px-3 py-1 text-xs" %}{% include "quanta/_button_inner.html" %}{% endwith %}
+{% elif s == "lg" %}
+  {% with size_cls="px-6 py-3 text-base" %}{% include "quanta/_button_inner.html" %}{% endwith %}
+{% else %}
+  {% with size_cls="px-4 py-2.5 text-sm" %}{% include "quanta/_button_inner.html" %}{% endwith %}
+{% endif %}
+
+{% endwith %}
