@@ -22,7 +22,7 @@ def create(request):
   """Create a new group. Returns redirect to group detail."""
   form = CreateGroupForm(request.POST)
   if not form.is_valid():
-    return render(request, 'groups/create.html', {'form': form})
+    return render(request, 'pages/group-create.html', {'form': form})
 
   name = form.cleaned_data['name']
   name_hash = Web3.solidity_keccak(['string'], [name]).hex()

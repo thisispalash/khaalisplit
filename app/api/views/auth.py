@@ -30,11 +30,11 @@ def signup_view(request):
     return redirect('/')
 
   if request.method == 'GET':
-    return render(request, 'auth/signup.html', {'form': SignupForm()})
+    return render(request, 'pages/signup.html', {'form': SignupForm()})
 
   form = SignupForm(request.POST)
   if not form.is_valid():
-    return render(request, 'auth/signup.html', {'form': form})
+    return render(request, 'pages/signup.html', {'form': form})
 
   subname = _generate_subname()
   user = User.objects.create_user(
@@ -63,11 +63,11 @@ def login_view(request):
     return redirect('/')
 
   if request.method == 'GET':
-    return render(request, 'auth/login.html', {'form': LoginForm()})
+    return render(request, 'pages/login.html', {'form': LoginForm()})
 
   form = LoginForm(request.POST)
   if not form.is_valid():
-    return render(request, 'auth/login.html', {'form': form})
+    return render(request, 'pages/login.html', {'form': form})
 
   user = authenticate(
     request,
@@ -76,7 +76,7 @@ def login_view(request):
   )
   if user is None:
     form.add_error(None, 'Invalid subname or password.')
-    return render(request, 'auth/login.html', {'form': form})
+    return render(request, 'pages/login.html', {'form': form})
 
   login(request, user)
   request._wide_event['extra']['login_subname'] = user.subname
@@ -100,20 +100,20 @@ def onboarding_profile_view(request):
 
   if request.method == 'GET':
     form = ProfileForm(instance=request.user)
-    return render(request, 'auth/onboarding/profile.html', {'form': form})
+    return render(request, 'pages/onboarding-profile.html', {'form': form})
 
   form = ProfileForm(request.POST, instance=request.user)
   if form.is_valid():
     form.save()
     return redirect('/api/auth/onboarding/wallet/')
-  return render(request, 'auth/onboarding/profile.html', {'form': form})
+  return render(request, 'pages/onboarding-profile.html', {'form': form})
 
 
 def onboarding_wallet_view(request):
   """Onboarding step 2: connect and verify wallet."""
   if not request.user.is_authenticated:
     return redirect('/api/auth/signup/')
-  return render(request, 'auth/onboarding/wallet.html')
+  return render(request, 'pages/onboarding-wallet.html')
 
 
 @require_POST
@@ -179,7 +179,7 @@ def verify_signature(request):
   request._wide_event['extra']['linked_address'] = address
 
   if request.htmx:
-    return render(request, 'auth/onboarding/wallet.html', {
+    return render(request, 'pages/onboarding-wallet.html', {
       'linked_address': linked,
       'success': True,
     })
