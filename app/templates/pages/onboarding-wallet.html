@@ -81,7 +81,7 @@
             call window.signMessage(msg)
             then set sig to it
             if sig
-              fetch /api/auth/address/verify/ {
+              fetch /api/auth/address/verify/ as json {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

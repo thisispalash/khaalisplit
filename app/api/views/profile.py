@@ -1,17 +1,17 @@
 """
 Profile-related API views.
 
-Handles payment preferences (stored as ENS text records on-chain).
+Handles payment preferences (stored locally + mirrored to ENS text records on-chain).
+Local DB is the source of truth for UI; on-chain is async/fire-and-forget.
 """
 import logging
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
-from web3 import Web3
 
 from api.utils.ens_codec import subname_node
-from api.utils.web3_utils import CHAIN_IDS, TOKEN_ADDRESSES, call_view, send_tx
+from api.utils.web3_utils import TOKEN_ADDRESSES, send_tx
 
 logger = logging.getLogger('wide_event')
 
@@ -34,10 +34,8 @@ CHAIN_DISPLAY = {v: label for v, label in CHAIN_OPTIONS}
 
 def _read_payment_prefs(user) -> dict:
   """
-  Read payment preferences from on-chain text records.
-
-  Falls back to defaults if records can't be read (e.g., no subname
-  registered yet, or RPC unavailable).
+  Read payment preferences from local DB (LinkedAddress model).
+  This is instant and doesn't depend on RPC availability.
   """
   defaults = {
     'payment_flow': 'gateway',
@@ -45,22 +43,16 @@ def _read_payment_prefs(user) -> dict:
     'payment_token': '',
   }
 
-  try:
-    node = subname_node(user.subname)
-
-    flow = call_view('subnames', 'text', node, 'com.khaalisplit.payment.flow')
-    chain = call_view('subnames', 'text', node, 'com.khaalisplit.payment.chain')
-    token = call_view('subnames', 'text', node, 'com.khaalisplit.payment.token')
-
-    if flow:
-      defaults['payment_flow'] = flow
-    if chain:
-      defaults['payment_chain'] = chain
-    if token:
-      defaults['payment_token'] = token
-
-  except Exception:
-    logger.debug(f'Could not read payment prefs for {user.subname}, using defaults')
+  primary = user.addresses.filter(is_primary=True).first()
+  if primary:
+    defaults['payment_chain'] = str(primary.chain_id)
+    if primary.token_addr:
+      defaults['payment_token'] = primary.token_addr
+    else:
+      # Look up USDC for the chain
+      usdc = TOKEN_ADDRESSES.get(primary.chain_id, {}).get('USDC', '')
+      if usdc:
+        defaults['payment_token'] = usdc
 
   return defaults
 
@@ -87,7 +79,7 @@ def _prefs_context(user, editing=False) -> dict:
 def payment_preferences(request):
   """
   GET:  Render the payment preferences partial (read-only or edit mode).
-  POST: Update payment preferences on-chain and return updated partial.
+  POST: Update payment preferences locally and mirror to chain (non-blocking).
   """
   if request.method == 'GET':
     editing = request.GET.get('edit') == '1'
@@ -107,25 +99,40 @@ def payment_preferences(request):
   if chain not in valid_chains:
     chain = '11155111'
 
-  # Look up USDC address for the selected chain
   chain_int = int(chain)
   usdc_addr = TOKEN_ADDRESSES.get(chain_int, {}).get('USDC', '')
 
-  node = subname_node(request.user.subname)
+  # Save locally first (instant, reliable)
+  primary = request.user.addresses.filter(is_primary=True).first()
+  if primary:
+    primary.chain_id = chain_int
+    if usdc_addr:
+      primary.token_addr = usdc_addr
+    primary.save(update_fields=['chain_id', 'token_addr'])
 
+  # Mirror to chain (fire-and-forget, non-blocking)
+  node = subname_node(request.user.subname)
   try:
     send_tx('subnames', 'setText', node, 'com.khaalisplit.payment.flow', flow)
+  except Exception:
+    logger.exception(f'setText payment.flow failed for {request.user.subname}')
+
+  try:
     send_tx('subnames', 'setText', node, 'com.khaalisplit.payment.chain', chain)
+  except Exception:
+    logger.exception(f'setText payment.chain failed for {request.user.subname}')
+
+  try:
     if usdc_addr:
       send_tx('subnames', 'setText', node, 'com.khaalisplit.payment.token', usdc_addr)
-
-    logger.info(
-      f'Payment prefs updated for {request.user.subname}: '
-      f'flow={flow} chain={chain} token={usdc_addr}'
-    )
   except Exception:
-    logger.exception(f'Payment prefs update failed for {request.user.subname}')
+    logger.exception(f'setText payment.token failed for {request.user.subname}')
 
-  # Return the updated (read-only) partial
+  logger.info(
+    f'Payment prefs updated for {request.user.subname}: '
+    f'flow={flow} chain={chain} token={usdc_addr}'
+  )
+
+  # Return the updated (read-only) partial — reads from local DB, instant
   ctx = _prefs_context(request.user, editing=False)
   return render(request, 'partials/payment_preferences.html', ctx)
